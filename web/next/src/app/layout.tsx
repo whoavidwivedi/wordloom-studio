@@ -1,30 +1,38 @@
 import "@/styles/globals.css"
 import type { Metadata } from "next"
-import dynamic from "next/dynamic"
-import { Toaster } from "sonner"
 
 import Background from "@/components/Background"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
-  title: "Wordloom — Find short, pronounceable names",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://wordloom.nrjdalal.com"),
+  title: {
+    default: "Wordloom Studio | Pronounceable Words",
+    template: "%s | Wordloom Studio",
+  },
   description:
     "Find short, pronounceable names for brands, products, and projects. Every name sounds like it could be a real word.",
   keywords: [
     "wordloom",
+    "wordloom studio",
     "name generator",
     "brand names",
     "product names",
     "pronounceable names",
-    "naming tool",
+    "phonotactic naming tool",
   ],
-  authors: [{ name: "Neeraj Dalal", url: "https://nrjdalal.com" }],
+  authors: [
+    { name: "Avi Dwivedi", url: "https://whoavidwivedi.work" },
+    { name: "Neeraj Dalal", url: "https://nrjdalal.com" },
+  ],
+  creator: "Avi Dwivedi",
   openGraph: {
-    title: "Wordloom — Find short, pronounceable names",
+    title: "Wordloom Studio | Pronounceable Words",
     description:
       "Find short, pronounceable names for brands, products, and projects. Every name sounds like it could be a real word.",
     url: "https://wordloom.nrjdalal.com",
-    siteName: "Wordloom",
+    siteName: "Wordloom Studio",
     locale: "en_US",
     type: "website",
     images: [
@@ -32,19 +40,24 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Wordloom — Find short, pronounceable names",
+        alt: "Wordloom Studio | Pronounceable Words",
+        type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Wordloom — Find short, pronounceable names",
+    title: "Wordloom Studio | Pronounceable Words",
     description:
       "Find short, pronounceable names for brands, products, and projects. Every name sounds like it could be a real word.",
     images: ["/og-image.png"],
+    creator: "@whoavidwivedi",
   },
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
     apple: "/apple-icon.png",
   },
 }
@@ -60,20 +73,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Background />
           {children}
-          <Toaster
-            position="bottom-right"
-            closeButton
-            toastOptions={{
-              style: {
-                background: "#ecebe5",
-                color: "#1a1a1a",
-                border: "1px solid #1a1a1a",
-                borderRadius: "0",
-                fontSize: "12px",
-                textTransform: "uppercase",
-              },
-            }}
-          />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

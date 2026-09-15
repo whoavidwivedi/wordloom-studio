@@ -45,3 +45,7 @@ yarn-error.log*
 
 # test
 .test-artifacts/
+
+# agents
+.agents/
+skills-lock.json

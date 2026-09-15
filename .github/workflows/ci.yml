@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, Lint, Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint & Format Check
+        run: |
+          bun run lint
+          bun run format:check
+
+      - name: Type Check (Web)
+        run: bun run --cwd web/next check-types
+
+      - name: Test CLI
+        run: bun run test
+
+      - name: Build Monorepo & Web App
+        run: bun run build

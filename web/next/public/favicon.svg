@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="discGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#222226"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Circular token base -->
+  <circle cx="16" cy="16" r="15" fill="url(#discGrad)" stroke="#2e2e32" stroke-width="1"/>
+  
+  <!-- Specular inner rim -->
+  <circle cx="16" cy="16" r="14" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="0.75"/>
+  
+  <!-- Centered geometric woven W -->
+  <path
+    d="M8.5 11.5L12.25 21L16 13.5L19.75 21L23.5 11.5"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="2.3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

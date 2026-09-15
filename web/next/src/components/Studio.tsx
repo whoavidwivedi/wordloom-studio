@@ -1,46 +1,85 @@
 "use client"
 
 import {
+  ArrowDownAZ,
   ArrowLeft,
-  Check,
+  BookA,
   Bookmark,
   BookmarkCheck,
+  Check,
+  ChevronRight,
+  Clock,
+  Compass,
   Copy,
+  Download,
   ExternalLink,
-  LayoutDashboard,
+  Globe2,
+  Moon,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  Sun,
   X,
 } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
-import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react"
+import { useTheme } from "next-themes"
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
 
 import { generateNamesAction, getLetterOffsetsAction } from "../app/actions"
 
-const spring = { type: "spring" as const, stiffness: 280, damping: 32, mass: 1.1 }
-const fastSpring = { type: "spring" as const, stiffness: 450, damping: 34, mass: 0.75 }
-const panelSpring = { type: "spring" as const, stiffness: 160, damping: 26, mass: 1.15 }
+// Emil Kowalski spring configurations: bounce must always be 0 for UI stability, duration under 300ms
+const criticallyDampedSpring = { type: "spring" as const, duration: 0.28, bounce: 0 }
+const mobileSheetSpring = { type: "spring" as const, duration: 0.32, bounce: 0 }
 
-const platformDescriptions: Record<string, string> = {
-  Domain: "Run a live domain search in Domainr.",
-  GitHub: "Open the matching GitHub handle or org page.",
-  "X (Twitter)": "Check the X profile for this name.",
-  Instagram: "Open the Instagram profile lookup.",
-  YouTube: "Check the YouTube handle with the @ prefix.",
-}
+const platformDirectory = [
+  {
+    name: "Domainr",
+    desc: "Search live domain extensions (.com, .io, .ai)",
+    getUrl: (q: string) => `https://domainr.com/?q=${encodeURIComponent(q)}`,
+    badge: "WHOIS / DNS",
+  },
+  {
+    name: "GitHub",
+    desc: "Check available username or organization handle",
+    getUrl: (q: string) => `https://github.com/${encodeURIComponent(q)}`,
+    badge: "Org / User",
+  },
+  {
+    name: "X (Twitter)",
+    desc: "Verify profile handle availability",
+    getUrl: (q: string) => `https://x.com/${encodeURIComponent(q)}`,
+    badge: "Social",
+  },
+  {
+    name: "Instagram",
+    desc: "Check account handle status",
+    getUrl: (q: string) => `https://instagram.com/${encodeURIComponent(q)}`,
+    badge: "Social",
+  },
+  {
+    name: "YouTube",
+    desc: "Verify YouTube channel handle with @ prefix",
+    getUrl: (q: string) => `https://www.youtube.com/@${encodeURIComponent(q)}`,
+    badge: "Channel",
+  },
+]
 
+// Result card with Emil Kowalski active:scale-[0.97] and concentric border radius
 const ResultCard = memo(function ResultCard({
   item,
   isSaved,
   isActive,
   isCopied,
-  isBookmarkAnimating,
-  copyFeedbackKey,
-  bookmarkFeedbackKey,
   onToggleBookmark,
   onCopy,
   onCheckAvailability,
@@ -49,114 +88,172 @@ const ResultCard = memo(function ResultCard({
   isSaved: boolean
   isActive: boolean
   isCopied: boolean
-  isBookmarkAnimating: boolean
-  copyFeedbackKey?: number
-  bookmarkFeedbackKey?: number
   onToggleBookmark: (item: { name: string; meaning: string }) => void
   onCopy: (text: string) => void
   onCheckAvailability: (name: string) => void
 }) {
   return (
-    <div
+    <article
       onClick={() => onCheckAvailability(item.name)}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "0 160px" } as any}
-      className={`group relative flex h-[160px] cursor-pointer flex-col overflow-hidden border p-5 ${
+      className={cn(
+        "group relative flex flex-col justify-between rounded-xl border p-4 sm:p-5 text-left select-none cursor-default",
+        "transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out",
         isActive
-          ? "border-[#C2A15D] bg-[#C2A15D] text-white shadow-xl ring-2 ring-[#C2A15D]/20"
-          : "border-[#1a1a1a] bg-white transition-colors duration-100 ease-out hover:bg-[#1a1a1a] hover:text-white"
-      }`}
+          ? "border-foreground bg-accent/60 ring-2 ring-foreground/20 shadow-md dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_8px_20px_-4px_rgba(0,0,0,0.7)]"
+          : "border-border/85 bg-card shadow-[0_1px_3px_0_rgba(0,0,0,0.04),0_1px_2px_-1px_rgba(0,0,0,0.02)] dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07),0_2px_8px_-2px_rgba(0,0,0,0.5)] hover:border-foreground/30 dark:hover:border-border hover:shadow-[0_6px_20px_-4px_rgba(0,0,0,0.08),0_2px_6px_-1px_rgba(0,0,0,0.03)] dark:hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.13),0_8px_24px_-4px_rgba(0,0,0,0.7)] hover:-translate-y-0.5",
+      )}
     >
-      {/* Background Decor */}
-      <div className="pointer-events-none absolute top-0 right-0 p-1 opacity-0 transition-opacity group-hover:opacity-10">
-        <div className="font-serif text-8xl font-black">{item.name.charAt(0)}</div>
+      <div>
+        {/* Header row: Name & Quick Actions */}
+        <div className="flex items-start justify-between gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onCheckAvailability(item.name)
+            }}
+            className="text-foreground hover:text-foreground/80 cursor-pointer text-left font-sans text-xl font-bold tracking-tight lowercase outline-none focus-visible:underline sm:text-2xl"
+            title={`Inspect ${item.name}`}
+          >
+            {item.name}
+          </button>
+
+          <div
+            className="flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* Copy Button with Emil Kowalski popLayout blur/scale icon animation */}
+            <button
+              type="button"
+              onClick={() => onCopy(item.name)}
+              className={cn(
+                "relative flex h-8 w-8 items-center justify-center rounded-lg outline-none select-none cursor-pointer",
+                "transition-[transform,background-color,border-color,color] duration-150 ease-out active:scale-[0.96]",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                "after:absolute after:-inset-1.5 after:content-['']",
+                isCopied
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              title={isCopied ? "Copied to clipboard" : "Copy name"}
+              aria-label={isCopied ? `Copied ${item.name}` : `Copy ${item.name}`}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                {isCopied ? (
+                  <motion.span
+                    key="copied"
+                    initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                    exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    transition={criticallyDampedSpring}
+                    className="flex items-center justify-center text-emerald-600 dark:text-emerald-400"
+                  >
+                    <Check className="h-4 w-4" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="copy"
+                    initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                    exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    transition={criticallyDampedSpring}
+                    className="flex items-center justify-center"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+
+            {/* Bookmark Button with contextual blur/scale icon animation */}
+            <button
+              type="button"
+              onClick={() => onToggleBookmark(item)}
+              className={cn(
+                "relative flex h-8 w-8 items-center justify-center rounded-lg outline-none select-none cursor-pointer",
+                "transition-[transform,background-color,border-color,color] duration-150 ease-out active:scale-[0.96]",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                "after:absolute after:-inset-1.5 after:content-['']",
+                isSaved
+                  ? "bg-muted text-foreground hover:bg-muted/80"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              title={isSaved ? "Remove bookmark" : "Save bookmark"}
+              aria-label={isSaved ? "Remove bookmark" : "Save bookmark"}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                {isSaved ? (
+                  <motion.span
+                    key="saved"
+                    initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                    exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    transition={criticallyDampedSpring}
+                    className="text-foreground flex items-center justify-center"
+                  >
+                    <BookmarkCheck className="h-4 w-4 fill-current" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="unsaved"
+                    initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                    exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                    transition={criticallyDampedSpring}
+                    className="flex items-center justify-center"
+                  >
+                    <Bookmark className="h-4 w-4" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+          </div>
+        </div>
+
+        {/* WordNet definition or Neologism note */}
+        {item.meaning ? (
+          <p className="text-muted-foreground mt-2.5 line-clamp-2 cursor-text font-sans text-xs leading-relaxed text-pretty select-text sm:text-[13px] dark:text-zinc-300/90">
+            {item.meaning}
+          </p>
+        ) : (
+          <p className="text-muted-foreground/70 mt-2.5 font-mono text-[11px] italic select-none dark:text-zinc-500">
+            Phonotactic neologism
+          </p>
+        )}
       </div>
 
-      <div className="relative z-10 mb-4 flex items-start justify-between">
-        <motion.button
+      {/* Footer Badges & Inspect indicator */}
+      <div className="border-border/80 mt-4 flex items-center justify-between border-t pt-3 dark:border-white/10">
+        <div className="flex items-center gap-1.5">
+          {item.meaning && (
+            <Badge
+              variant="outline"
+              className="border-border bg-muted/60 text-foreground h-4 px-1.5 py-0 text-[9px] font-semibold"
+            >
+              def
+            </Badge>
+          )}
+          <Badge variant="muted" className="h-4 px-1.5 py-0 text-[10px] tabular-nums">
+            {item.name.length} chars
+          </Badge>
+        </div>
+
+        <button
           type="button"
-          whileTap={{ scale: 0.92 }}
           onClick={(e) => {
             e.stopPropagation()
             onCheckAvailability(item.name)
           }}
-          className="flex items-center gap-2 text-2xl font-bold tracking-tight lowercase hover:underline"
+          className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 font-sans text-[11px] font-medium transition-colors outline-none active:scale-[0.96]"
+          title={`Inspect ${item.name} availability`}
         >
-          {item.name}
-        </motion.button>
-
-        <div className="flex items-center gap-1">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onCopy(item.name)
-            }}
-            className="relative rounded-full p-2 transition-colors hover:bg-white/10"
-            title="Copy"
-          >
-            <AnimatePresence>
-              {isCopied && (
-                <motion.span
-                  key={`copy-p-${copyFeedbackKey}`}
-                  initial={{ scale: 0.5, opacity: 0.5 }}
-                  animate={{ scale: 1.8, opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="absolute inset-0 rounded-full border border-current"
-                />
-              )}
-            </AnimatePresence>
-            {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </motion.button>
-
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleBookmark(item)
-            }}
-            className="relative rounded-full p-2 transition-colors hover:bg-white/10"
-            title="Bookmark"
-          >
-            <AnimatePresence>
-              {isBookmarkAnimating && (
-                <motion.span
-                  key={`book-p-${bookmarkFeedbackKey}`}
-                  initial={{ scale: 0.5, opacity: 0.5 }}
-                  animate={{ scale: 1.8, opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="absolute inset-0 rounded-full border border-current"
-                />
-              )}
-            </AnimatePresence>
-            {isSaved ? (
-              <BookmarkCheck className="h-4 w-4 fill-current" />
-            ) : (
-              <Bookmark className="h-4 w-4" />
-            )}
-          </motion.button>
-        </div>
+          <span>Inspect</span>
+          <ChevronRight className="h-3.5 w-3.5 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
+        </button>
       </div>
-
-      <div className="relative z-10 flex flex-1 flex-col justify-between">
-        <div className="line-clamp-3 font-sans text-xs leading-relaxed opacity-70 group-hover:opacity-90">
-          {item.meaning}
-        </div>
-        <div className="mt-3 flex h-4 items-center gap-2">
-          {item.meaning && (
-            <span className="bg-[#1a1a1a] px-1.5 py-0.5 font-mono text-[8px] text-white uppercase transition-colors group-hover:bg-white group-hover:text-[#1a1a1a]">
-              def
-            </span>
-          )}
-          <span className="font-mono text-[8px] uppercase opacity-40 group-hover:opacity-60">
-            {item.name.length} chars
-          </span>
-        </div>
-      </div>
-    </div>
+    </article>
   )
 })
 
@@ -167,11 +264,15 @@ export function Studio({
   onBack: () => void
   onAvailabilityOpenChange?: (isOpen: boolean) => void
 }) {
-  const [mode, setMode] = useState<"ui" | "cli" | "bookmarks">("ui")
+  const { resolvedTheme, setTheme } = useTheme()
+  const [themeMounted, setThemeMounted] = useState(false)
+
+  const [mode, setMode] = useState<"ui" | "bookmarks">("ui")
   const [length, setLength] = useState([5])
   const [prefix, setPrefix] = useState("")
   const [suffix, setSuffix] = useState("")
   const [contains, setContains] = useState("")
+  const [defOnly, setDefOnly] = useState(false)
 
   const [isPending, startTransition] = useTransition()
   const [results, setResults] = useState<{ name: string; meaning: string }[]>([])
@@ -179,22 +280,23 @@ export function Studio({
   const [skip, setSkip] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [availabilityTarget, setAvailabilityTarget] = useState<string | null>(null)
-  const [copyFeedback, setCopyFeedback] = useState<{ name: string; key: number } | null>(null)
-  const [bookmarkFeedback, setBookmarkFeedback] = useState<{ name: string; key: number } | null>(
-    null,
-  )
+  const [copiedName, setCopiedName] = useState<string | null>(null)
+
   const [letterOffsets, setLetterOffsets] = useState<Record<string, number>>({})
   const [activeLetter, setActiveLetter] = useState<string>("a")
   const [hasSearched, setHasSearched] = useState(false)
-  const [_pendingLetter, setPendingLetter] = useState<string | null>(null)
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
+
+  const prefixInputRef = useRef<HTMLInputElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-
-  // Bookmarks State
-  const [bookmarks, setBookmarks] = useState<{ name: string; meaning: string }[]>([])
-  const [hasMounted, setHasMounted] = useState(false)
-  const [bookmarkSort, setBookmarkSort] = useState<"latest" | "alpha">("latest")
-
   const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // Bookmarks state
+  const [bookmarks, setBookmarks] = useState<{ name: string; meaning: string }[]>([])
+  const [bookmarkSearch, setBookmarkSearch] = useState("")
+  const [bookmarkSort, setBookmarkSort] = useState<"latest" | "alpha">("latest")
+  const [isExported, setIsExported] = useState(false)
+
   const resultsCache = useRef<
     Record<
       number,
@@ -203,7 +305,7 @@ export function Studio({
   >({})
 
   useEffect(() => {
-    setHasMounted(true)
+    setThemeMounted(true)
     const saved = localStorage.getItem("wordloom_bookmarks")
     if (saved) {
       try {
@@ -215,23 +317,10 @@ export function Studio({
   }, [])
 
   useEffect(() => {
-    if (!availabilityTarget) return
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setAvailabilityTarget(null)
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [availabilityTarget])
-
-  useEffect(() => {
     onAvailabilityOpenChange?.(availabilityTarget !== null)
   }, [availabilityTarget, onAvailabilityOpenChange])
 
-  // ScrollSpy for A-Z Navigation
+  // ScrollSpy for A-Z Sections
   useEffect(() => {
     if (mode === "bookmarks" || results.length === 0) return
 
@@ -242,11 +331,10 @@ export function Studio({
           .map((e) => e.target.getAttribute("data-letter") || "")
 
         if (visibleLetters.length > 0 && visibleLetters[0]) {
-          // Set to the first visible letter in the viewport
           setActiveLetter(visibleLetters[0].toLowerCase())
         }
       },
-      { threshold: 0.1, rootMargin: "-10% 0px -80% 0px" },
+      { threshold: 0.1, rootMargin: "-10% 0px -75% 0px" },
     )
 
     const sections = document.querySelectorAll("[data-letter]")
@@ -255,22 +343,7 @@ export function Studio({
     return () => observer.disconnect()
   }, [results, mode])
 
-  useEffect(() => {
-    if (!copyFeedback) return
-
-    const timeout = window.setTimeout(() => setCopyFeedback(null), 900)
-    return () => window.clearTimeout(timeout)
-  }, [copyFeedback])
-
-  useEffect(() => {
-    if (!bookmarkFeedback) return
-
-    const timeout = window.setTimeout(() => setBookmarkFeedback(null), 520)
-    return () => window.clearTimeout(timeout)
-  }, [bookmarkFeedback])
-
   const toggleBookmark = useCallback((item: { name: string; meaning: string }) => {
-    setBookmarkFeedback({ name: item.name, key: Date.now() })
     setBookmarks((prev) => {
       const exists = prev.some((b) => b.name === item.name)
       const updated = exists ? prev.filter((b) => b.name !== item.name) : [...prev, item]
@@ -279,15 +352,17 @@ export function Studio({
     })
   }, [])
 
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopyFeedback({ name: text, key: Date.now() })
-    toast.success(`Copied "${text}" to clipboard`, {
-      description: "You can now paste it anywhere.",
-    })
+  const handleCopy = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedName(text)
+      setTimeout(() => setCopiedName(null), 1800)
+    } catch {
+      toast.error(`Failed to copy "${text}" to clipboard`)
+    }
   }, [])
 
-  const handleGenerate = () => {
+  const handleGenerate = useCallback(() => {
     setResults([])
     setSkip(0)
     setTotalCount(0)
@@ -295,27 +370,27 @@ export function Studio({
     setHasSearched(true)
     setLetterOffsets({})
     resultsCache.current = {}
+    setIsMobileFiltersOpen(false)
 
     startTransition(async () => {
-      let finalLength = length[0] ?? 5
-      let finalPrefix = prefix
-      let finalSuffix = suffix
-      let finalContains = contains
+      const finalLength = length[0] ?? 5
+      const finalPrefix = prefix.toLowerCase()
+      const finalSuffix = suffix.toLowerCase()
+      const finalContains = contains.toLowerCase()
 
-      // Pre-calculate alphabetical offsets for A-Z Jumping
       const offsets = await getLetterOffsetsAction(
         finalLength,
-        finalPrefix.toLowerCase(),
-        finalSuffix.toLowerCase(),
-        finalContains.toLowerCase(),
+        finalPrefix,
+        finalSuffix,
+        finalContains,
       )
       setLetterOffsets(offsets)
 
       const res = await generateNamesAction(
         finalLength,
-        finalPrefix.toLowerCase(),
-        finalSuffix.toLowerCase(),
-        finalContains.toLowerCase(),
+        finalPrefix,
+        finalSuffix,
+        finalContains,
         0,
         500,
       )
@@ -325,7 +400,6 @@ export function Studio({
       setSkip(res.results.length)
       setHasMore(res.results.length < res.count)
 
-      // Cache the first page
       resultsCache.current[0] = {
         results: res.results,
         hasMore: res.results.length < res.count,
@@ -338,7 +412,73 @@ export function Studio({
 
       if (mode === "bookmarks") setMode("ui")
     })
-  }
+  }, [length, prefix, suffix, contains, mode])
+
+  // Initial auto-generation
+  useEffect(() => {
+    if (!hasSearched) {
+      handleGenerate()
+    }
+  }, [hasSearched, handleGenerate])
+
+  // Global hotkeys: ⌘+Enter, ?, 1, 2, /, Escape
+  useEffect(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      // 1. Generation hotkey: works regardless of input focus
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault()
+        handleGenerate()
+        return
+      }
+
+      // 2. Escape: dismiss overlays
+      if (e.key === "Escape") {
+        if (availabilityTarget) {
+          e.preventDefault()
+          setAvailabilityTarget(null)
+          return
+        }
+        if (isMobileFiltersOpen) {
+          e.preventDefault()
+          setIsMobileFiltersOpen(false)
+          return
+        }
+      }
+
+      // Hotkeys that only fire when NOT typing in an input or textarea
+      const isTyping = (target: EventTarget | null) => {
+        if (!target || !(target instanceof HTMLElement)) return false
+        return (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.tagName === "SELECT"
+        )
+      }
+
+      if (isTyping(e.target)) return
+
+      if (e.key === "/" && !e.shiftKey) {
+        e.preventDefault()
+        prefixInputRef.current?.focus()
+        return
+      }
+
+      if (e.key === "1") {
+        e.preventDefault()
+        setMode("ui")
+        return
+      }
+
+      if (e.key === "2") {
+        e.preventDefault()
+        setMode("bookmarks")
+        return
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKey)
+    return () => window.removeEventListener("keydown", handleGlobalKey)
+  }, [handleGenerate, availabilityTarget, isMobileFiltersOpen])
 
   const scrollToLetterSection = (letter: string) => {
     requestAnimationFrame(() => {
@@ -349,9 +489,7 @@ export function Studio({
         `[data-letter="${letter.toUpperCase()}"]`,
       ) as HTMLElement
       if (element) {
-        // Calculate offset relative to the container
-        const targetScroll = element.offsetTop
-        container.scrollTop = targetScroll
+        container.scrollTop = element.offsetTop - 12
       }
     })
   }
@@ -360,14 +498,11 @@ export function Studio({
     const offset = letterOffsets[letter]
     if (offset === undefined || offset === -1) return
 
-    // 1. Check if already in current results (DOM check)
     scrollToLetterSection(letter)
     setActiveLetter(letter)
 
-    // 2. Check Cache (Optimization)
     const cached = resultsCache.current[offset]
     if (cached) {
-      setPendingLetter(null) // Ensure cleared on cache hit
       setResults((prev) => {
         const map = new Map(prev.map((i) => [i.name, i]))
         cached.results.forEach((i) => map.set(i.name, i))
@@ -381,23 +516,21 @@ export function Studio({
       return
     }
 
-    // 3. Fetch (Cache Miss)
     setSkip(offset)
     setHasMore(true)
     setActiveLetter(letter)
-    setPendingLetter(letter.toUpperCase())
 
     startTransition(async () => {
-      let finalLength = length[0] ?? 5
-      let finalPrefix = prefix
-      let finalSuffix = suffix
-      let finalContains = contains
+      const finalLength = length[0] ?? 5
+      const finalPrefix = prefix.toLowerCase()
+      const finalSuffix = suffix.toLowerCase()
+      const finalContains = contains.toLowerCase()
 
       const res = await generateNamesAction(
         finalLength,
-        finalPrefix.toLowerCase(),
-        finalSuffix.toLowerCase(),
-        finalContains.toLowerCase(),
+        finalPrefix,
+        finalSuffix,
+        finalContains,
         offset,
         500,
       )
@@ -410,32 +543,30 @@ export function Studio({
       setSkip(offset + res.results.length)
       setHasMore(offset + res.results.length < totalCount)
 
-      // Update Cache
       resultsCache.current[offset] = {
         results: res.results,
         hasMore: offset + res.results.length < totalCount,
-        totalCount: totalCount,
+        totalCount,
       }
 
-      setPendingLetter(null)
       scrollToLetterSection(letter)
     })
   }
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     if (isPending || !hasMore) return
 
     startTransition(async () => {
-      let finalLength = length[0] ?? 5
-      let finalPrefix = prefix
-      let finalSuffix = suffix
-      let finalContains = contains
+      const finalLength = length[0] ?? 5
+      const finalPrefix = prefix.toLowerCase()
+      const finalSuffix = suffix.toLowerCase()
+      const finalContains = contains.toLowerCase()
 
       const res = await generateNamesAction(
         finalLength,
-        finalPrefix.toLowerCase(),
-        finalSuffix.toLowerCase(),
-        finalContains.toLowerCase(),
+        finalPrefix,
+        finalSuffix,
+        finalContains,
         skip,
         500,
       )
@@ -448,7 +579,7 @@ export function Studio({
       setSkip((prev) => prev + res.results.length)
       setHasMore(results.length + res.results.length < res.count)
     })
-  }
+  }, [isPending, hasMore, length, prefix, suffix, contains, skip, results.length])
 
   useEffect(() => {
     if (!hasMore || isPending) return
@@ -459,7 +590,7 @@ export function Studio({
           loadMore()
         }
       },
-      { threshold: 1.0 },
+      { threshold: 0.8 },
     )
 
     if (sentinelRef.current) {
@@ -467,522 +598,1066 @@ export function Studio({
     }
 
     return () => observer.disconnect()
-  }, [hasMore, isPending, skip])
+  }, [hasMore, isPending, loadMore])
 
-  const sortedBookmarks = [...bookmarks].sort((a, b) => {
-    if (bookmarkSort === "alpha") return a.name.localeCompare(b.name)
-    return 0 // Latest is default (array order)
-  })
+  const filteredResults = useMemo(() => {
+    if (!defOnly) return results
+    return results.filter((item) => item.meaning && item.meaning.length > 0)
+  }, [results, defOnly])
 
-  const displayedResults = mode === "bookmarks" ? sortedBookmarks : results
+  const sortedBookmarks = useMemo(() => {
+    let list = [...bookmarks]
+    if (bookmarkSearch.trim()) {
+      const q = bookmarkSearch.toLowerCase()
+      list = list.filter((b) => b.name.includes(q) || b.meaning.toLowerCase().includes(q))
+    }
+    if (bookmarkSort === "alpha") {
+      list.sort((a, b) => a.name.localeCompare(b.name))
+    }
+    return list
+  }, [bookmarks, bookmarkSearch, bookmarkSort])
 
-  // Alphabetical Grouping if we have many results
-  const groupedResults =
-    displayedResults && displayedResults.length > 8
-      ? displayedResults.reduce(
-          (acc, item) => {
-            const char = item.name.charAt(0).toUpperCase()
-            if (!acc[char]) acc[char] = []
-            acc[char].push(item)
-            return acc
-          },
-          {} as Record<string, { name: string; meaning: string }[]>,
-        )
-      : null
-  const availabilityLinks = availabilityTarget
-    ? [
-        {
-          label: "Domain",
-          href: `https://domainr.com/?q=${encodeURIComponent(availabilityTarget)}`,
-        },
-        {
-          label: "GitHub",
-          href: `https://github.com/${encodeURIComponent(availabilityTarget)}`,
-        },
-        {
-          label: "X (Twitter)",
-          href: `https://x.com/${encodeURIComponent(availabilityTarget)}`,
-        },
-        {
-          label: "Instagram",
-          href: `https://instagram.com/${encodeURIComponent(availabilityTarget)}`,
-        },
-        {
-          label: "YouTube",
-          href: `https://www.youtube.com/@${encodeURIComponent(availabilityTarget)}`,
-        },
-      ]
-    : []
+  const displayedList = mode === "bookmarks" ? sortedBookmarks : filteredResults
 
-  return (
-    <div className="relative z-20 flex h-full flex-col">
-      {/* Header */}
-      <header className="flex shrink-0 items-center justify-between border-b border-[#1a1a1a] p-6 lg:p-8">
-        <div className="flex items-center gap-4">
-          <h2 className="font-serif text-3xl font-bold tracking-tighter uppercase">Studio</h2>
-          <div className="ml-4 hidden border border-[#1a1a1a] font-mono text-xs sm:flex">
+  const groupedResults = useMemo(() => {
+    if (!displayedList || displayedList.length <= 8) return null
+    return displayedList.reduce(
+      (acc, item) => {
+        const char = item.name.charAt(0).toUpperCase()
+        if (!acc[char]) acc[char] = []
+        acc[char].push(item)
+        return acc
+      },
+      {} as Record<string, { name: string; meaning: string }[]>,
+    )
+  }, [displayedList])
+
+  const exportBookmarks = () => {
+    if (bookmarks.length === 0) return
+    const text = bookmarks.map((b) => (b.meaning ? `${b.name} : ${b.meaning}` : b.name)).join("\n")
+    navigator.clipboard.writeText(text)
+    setIsExported(true)
+    setTimeout(() => setIsExported(false), 1800)
+  }
+
+  const selectedTargetItem = useMemo(() => {
+    if (!availabilityTarget) return null
+    return (
+      results.find((r) => r.name === availabilityTarget) ||
+      bookmarks.find((b) => b.name === availabilityTarget) || {
+        name: availabilityTarget,
+        meaning: "",
+      }
+    )
+  }, [availabilityTarget, results, bookmarks])
+
+  const resetFilters = () => {
+    setPrefix("")
+    setSuffix("")
+    setContains("")
+    setDefOnly(false)
+  }
+
+  // Common Controls Panel Content (Used in Desktop Sidebar and Mobile Bottom Sheet)
+  const renderControls = () => (
+    <div className="flex flex-col gap-6">
+      {/* Length Selector */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-muted-foreground font-sans text-xs font-semibold tracking-wider uppercase">
+            Target Length
+          </Label>
+          <Badge variant="muted" className="tabular-nums">
+            {length[0]} letters
+          </Badge>
+        </div>
+
+        {/* Quick length chips */}
+        <div className="grid grid-cols-7 gap-1">
+          {[2, 3, 4, 5, 6, 7, 8].map((val) => (
             <button
-              onClick={() => setMode("ui")}
-              className={`flex items-center gap-2 px-3 py-1 transition-colors ${mode === "ui" ? "bg-[#1a1a1a] text-[#ecebe5]" : "text-[#1a1a1a] hover:bg-neutral-100"}`}
+              key={val}
+              type="button"
+              onClick={() => setLength([val])}
+              className={`focus-visible:ring-ring flex h-8 items-center justify-center rounded-md font-mono text-xs font-medium transition-[transform,background-color,border-color,color] duration-150 ease-out outline-none select-none focus-visible:ring-2 active:scale-[0.95] ${
+                length[0] === val
+                  ? "border-foreground bg-foreground text-background border font-bold shadow-xs"
+                  : "border-border bg-muted/30 text-muted-foreground hover:border-foreground/30 hover:text-foreground border"
+              }`}
             >
-              <LayoutDashboard className="h-3 w-3" /> Visual
+              {val}
             </button>
-            <button
-              onClick={() => setMode("bookmarks")}
-              className={`flex items-center gap-2 border-l border-[#1a1a1a] px-3 py-1 transition-colors ${mode === "bookmarks" ? "bg-[#1a1a1a] text-[#ecebe5]" : "text-[#1a1a1a] hover:bg-neutral-100"}`}
-            >
-              <Bookmark className="h-3 w-3" /> Saved ({hasMounted ? bookmarks.length : 0})
-            </button>
+          ))}
+        </div>
+
+        <Slider
+          value={length}
+          onValueChange={setLength}
+          max={8}
+          min={2}
+          step={1}
+          className="cursor-pointer py-2"
+        />
+      </div>
+
+      <Separator />
+
+      {/* Constraint Inputs */}
+      <div className="space-y-3.5">
+        {/* Prefix */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Label
+                htmlFor="prefix-input"
+                className="text-muted-foreground font-sans text-xs font-medium"
+              >
+                Starts with (Prefix)
+              </Label>
+            </div>
+            {prefix && (
+              <button
+                type="button"
+                onClick={() => setPrefix("")}
+                className="text-muted-foreground hover:text-foreground font-mono text-[10px] transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              ref={prefixInputRef}
+              id="prefix-input"
+              placeholder="e.g. str, vel, vo"
+              value={prefix}
+              onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleGenerate()
+                }
+              }}
+              maxLength={length[0]}
+              className="h-9 pr-8 font-mono text-xs tracking-wider uppercase"
+            />
+            {prefix && (
+              <button
+                type="button"
+                onClick={() => setPrefix("")}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 font-mono text-xs uppercase opacity-60 hover:underline"
-        >
-          <ArrowLeft className="h-4 w-4" /> Return
-        </button>
-      </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        {/* Controls Sidebar */}
-        <div className="flex w-full shrink-0 flex-col gap-8 overflow-y-auto border-b border-[#1a1a1a] bg-[#f8f7f2] p-6 md:w-[22rem] md:border-r md:border-b-0 lg:w-[23rem] lg:p-8 xl:w-[24rem]">
-          {/* Mobile Mode Toggle */}
-          <div className="flex flex-wrap border border-[#1a1a1a] font-mono text-xs sm:hidden">
-            <button
-              onClick={() => setMode("ui")}
-              className={`flex flex-1 items-center justify-center gap-2 px-2 py-2 transition-colors ${mode === "ui" ? "bg-[#1a1a1a] text-[#ecebe5]" : "text-[#1a1a1a] hover:bg-neutral-100"}`}
+        {/* Suffix */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="suffix-input"
+              className="text-muted-foreground font-sans text-xs font-medium"
             >
-              <LayoutDashboard className="h-3 w-3" /> Visual
-            </button>
-            <button
-              onClick={() => setMode("bookmarks")}
-              className={`flex flex-1 items-center justify-center gap-2 border-l border-[#1a1a1a] px-2 py-2 transition-colors ${mode === "bookmarks" ? "bg-[#1a1a1a] text-[#ecebe5]" : "text-[#1a1a1a] hover:bg-neutral-100"}`}
-            >
-              <Bookmark className="h-3 w-3" /> Saved
-            </button>
+              Ends with (Suffix)
+            </Label>
+            {suffix && (
+              <button
+                type="button"
+                onClick={() => setSuffix("")}
+                className="text-muted-foreground hover:text-foreground font-mono text-[10px] transition-colors"
+              >
+                Clear
+              </button>
+            )}
           </div>
+          <div className="relative">
+            <Input
+              id="suffix-input"
+              placeholder="e.g. io, ex, on"
+              value={suffix}
+              onChange={(e) => setSuffix(e.target.value.replace(/[^a-zA-Z]/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleGenerate()
+                }
+              }}
+              maxLength={length[0]}
+              className="h-9 pr-8 font-mono text-xs tracking-wider uppercase"
+            />
+            {suffix && (
+              <button
+                type="button"
+                onClick={() => setSuffix("")}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
 
-          {mode === "ui" && (
+        {/* Contains */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="contains-input"
+              className="text-muted-foreground font-sans text-xs font-medium"
+            >
+              Must Contain
+            </Label>
+            {contains && (
+              <button
+                type="button"
+                onClick={() => setContains("")}
+                className="text-muted-foreground hover:text-foreground font-mono text-[10px] transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              id="contains-input"
+              placeholder="e.g. ar, lum, x"
+              value={contains}
+              onChange={(e) => setContains(e.target.value.replace(/[^a-zA-Z]/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleGenerate()
+                }
+              }}
+              maxLength={length[0]}
+              className="h-9 pr-8 font-mono text-xs tracking-wider uppercase"
+            />
+            {contains && (
+              <button
+                type="button"
+                onClick={() => setContains("")}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Vocabulary Scope: 2-Option Segmented Control */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-foreground text-xs font-medium">Vocabulary Scope</Label>
+          <span className="text-muted-foreground font-mono text-[10px]">
+            {defOnly ? "Dictionary definitions" : "All synthesized names"}
+          </span>
+        </div>
+        <div className="border-border/80 bg-muted/80 grid grid-cols-2 rounded-lg border p-0.5 text-xs shadow-xs select-none">
+          <button
+            type="button"
+            onClick={() => setDefOnly(false)}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs outline-none transition-[color,background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring",
+              !defOnly
+                ? "bg-foreground text-background font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground font-medium",
+            )}
+          >
+            <Globe2 className="h-3.5 w-3.5" />
+            <span>All Names</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDefOnly(true)}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs outline-none transition-[color,background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring",
+              defOnly
+                ? "bg-foreground text-background font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground font-medium",
+            )}
+          >
+            <BookA className="h-3.5 w-3.5" />
+            <span>WordNet Def</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="mt-auto space-y-2 pt-4">
+        {(prefix || suffix || contains || defOnly) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetFilters}
+            className="text-muted-foreground hover:text-foreground w-full text-xs"
+          >
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+            <span>Reset constraints</span>
+          </Button>
+        )}
+
+        <Button
+          type="button"
+          onClick={handleGenerate}
+          disabled={isPending}
+          className="h-10 w-full text-xs font-semibold"
+        >
+          {isPending ? (
             <>
-              <div className="space-y-4">
-                <div className="flex items-end justify-between">
-                  <Label className="font-serif tracking-widest text-[#1a1a1a] uppercase">
-                    Length
-                  </Label>
-                  <span className="bg-[#1a1a1a] px-2 py-0.5 font-mono text-sm font-bold text-white">
-                    {length[0]}
-                  </span>
-                </div>
-                <Slider
-                  value={length}
-                  onValueChange={setLength}
-                  max={8}
-                  min={2}
-                  step={1}
-                  className="cursor-pointer py-2"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prefix" className="font-serif text-xs tracking-widest uppercase">
-                  Prefix
-                </Label>
-                <Input
-                  id="prefix"
-                  value={prefix}
-                  onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, ""))}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleGenerate()
-                    }
-                  }}
-                  maxLength={length[0]}
-                  className="h-10 rounded-none border-[#1a1a1a] font-bold tracking-widest uppercase"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="suffix" className="font-serif text-xs tracking-widest uppercase">
-                  Suffix
-                </Label>
-                <Input
-                  id="suffix"
-                  value={suffix}
-                  onChange={(e) => setSuffix(e.target.value.replace(/[^a-zA-Z]/g, ""))}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleGenerate()
-                    }
-                  }}
-                  maxLength={length[0]}
-                  className="h-10 rounded-none border-[#1a1a1a] font-bold tracking-widest uppercase"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contains" className="font-serif text-xs tracking-widest uppercase">
-                  Contains
-                </Label>
-                <Input
-                  id="contains"
-                  value={contains}
-                  onChange={(e) => setContains(e.target.value.replace(/[^a-zA-Z]/g, ""))}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleGenerate()
-                    }
-                  }}
-                  maxLength={length[0]}
-                  className="h-10 rounded-none border-[#1a1a1a] font-bold tracking-widest uppercase"
-                />
-              </div>
-
-              <div className="mt-auto space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="font-mono text-[10px] uppercase opacity-40">Loom Status</span>
-                  <span className="font-mono text-[10px] font-bold text-[#1a1a1a] uppercase">
-                    {isPending ? "Weaving..." : "Ready"}
-                  </span>
-                </div>
-                <div className="pt-2 pr-2">
-                  <button
-                    onClick={handleGenerate}
-                    disabled={isPending}
-                    className="flex h-14 w-full items-center justify-center border-2 border-[#1a1a1a] bg-white font-serif text-sm font-bold tracking-[0.2em] text-[#1a1a1a] uppercase shadow-[4px_4px_0px_0px_rgba(26,26,26,1)] transition-none hover:bg-[#1a1a1a] hover:text-white active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:translate-x-[4px] disabled:translate-y-[4px] disabled:opacity-50 disabled:shadow-none"
-                  >
-                    {isPending ? "Processing" : "Generate"}
-                  </button>
-                </div>
-              </div>
+              <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <span>Weaving...</span>
             </>
+          ) : (
+            <span>Generate Names</span>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground relative flex h-full w-full flex-col overflow-hidden">
+      {/* Top Header */}
+      <header className="border-border/80 bg-background/85 sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b px-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] backdrop-blur-md sm:px-6 dark:shadow-[0_1px_4px_0_rgba(0,0,0,0.35)]">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="text-muted-foreground hover:text-foreground h-8 gap-1 px-2 text-xs"
+            title="Return to home"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+
+          <Separator orientation="vertical" className="hidden h-4 sm:block" />
+
+          {/* Shadcn Tabs for Mode Switcher */}
+          <Tabs value={mode} onValueChange={(val) => setMode(val as any)}>
+            <TabsList className="bg-muted/80 border-border/80 h-8.5 rounded-lg border p-1 shadow-xs">
+              <TabsTrigger value="ui" className="h-6.5 gap-1.5 px-3 text-xs font-medium">
+                <Compass className="h-3.5 w-3.5 shrink-0" />
+                <span>Studio</span>
+              </TabsTrigger>
+              <TabsTrigger value="bookmarks" className="h-6.5 gap-1.5 px-3 text-xs font-medium">
+                <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                <span>Saved</span>
+                {bookmarks.length > 0 && (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0 text-[10px] font-mono tabular-nums leading-none flex items-center justify-center h-4 transition-colors",
+                      mode === "bookmarks"
+                        ? "bg-background/25 text-background font-bold"
+                        : "bg-muted-foreground/15 text-muted-foreground font-semibold",
+                    )}
+                  >
+                    {bookmarks.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Right Nav Utilities */}
+        <div className="flex items-center gap-2">
+          {/* Mobile Filter Sheet Trigger */}
+          {mode === "ui" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsMobileFiltersOpen(true)}
+              className="flex h-8 gap-1.5 text-xs md:hidden"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Filters</span>
+              {(prefix || suffix || contains || defOnly) && (
+                <span className="bg-foreground h-1.5 w-1.5 rounded-full" />
+              )}
+            </Button>
           )}
 
-          {mode === "bookmarks" && (
-            <div className="flex h-full flex-1 flex-col items-start justify-start gap-4">
-              <div className="flex w-full items-center justify-between">
-                <h3 className="font-serif text-xl text-black uppercase">Your Collection</h3>
-                <div className="flex border border-[#1a1a1a] font-mono text-[10px]">
+          {themeMounted && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              className="text-muted-foreground hover:text-foreground h-8 w-8 px-0"
+              title="Toggle theme"
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Studio Viewport */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Desktop Controls Sidebar */}
+        {mode === "ui" && (
+          <aside className="border-border/80 bg-sidebar/70 dark:bg-sidebar/40 hidden w-72 shrink-0 flex-col overflow-y-auto border-r p-5 shadow-[1px_0_4px_0_rgba(0,0,0,0.02)] backdrop-blur-md md:flex lg:w-80 dark:shadow-[1px_0_8px_0_rgba(0,0,0,0.25)]">
+            <div className="border-border mb-4 flex items-center justify-between border-b pb-3">
+              <span className="text-foreground font-sans text-xs font-semibold tracking-wider uppercase">
+                Configuration
+              </span>
+              <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                {isPending ? "Weaving..." : "Ready"}
+              </span>
+            </div>
+            {renderControls()}
+          </aside>
+        )}
+
+        {/* Mobile Filter Drawer (iOS-style bottom sheet) */}
+        <AnimatePresence initial={false}>
+          {isMobileFiltersOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => setIsMobileFiltersOpen(false)}
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs md:hidden"
+              />
+              <motion.div
+                initial={{ transform: "translateY(100%)" }}
+                animate={{ transform: "translateY(0%)" }}
+                exit={{ transform: "translateY(100%)" }}
+                transition={mobileSheetSpring}
+                className="border-border/80 bg-card/98 fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t p-5 shadow-2xl backdrop-blur-xl md:hidden dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_-12px_36px_rgba(0,0,0,0.8)]"
+              >
+                <div className="bg-muted-foreground/30 mx-auto mb-3 h-1 w-10 rounded-full" />
+                <div className="border-border mb-4 flex items-center justify-between border-b pb-3">
+                  <span className="text-foreground font-sans text-sm font-bold">
+                    Filters & Constraints
+                  </span>
                   <button
-                    onClick={() => setBookmarkSort("latest")}
-                    className={`px-2 py-0.5 transition-colors ${bookmarkSort === "latest" ? "bg-[#1a1a1a] text-white" : "text-[#1a1a1a] hover:bg-neutral-100"}`}
+                    type="button"
+                    onClick={() => setIsMobileFiltersOpen(false)}
+                    className="text-muted-foreground hover:bg-muted rounded-md p-1"
                   >
-                    Latest
-                  </button>
-                  <button
-                    onClick={() => setBookmarkSort("alpha")}
-                    className={`border-l border-[#1a1a1a] px-2 py-0.5 transition-colors ${bookmarkSort === "alpha" ? "bg-[#1a1a1a] text-white" : "text-[#1a1a1a] hover:bg-neutral-100"}`}
-                  >
-                    A-Z
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
+                {renderControls()}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
-              <p className="font-sans text-sm opacity-60">
-                {bookmarks.length === 0
-                  ? "You haven't bookmarked any generations yet."
-                  : `You have successfully saved ${bookmarks.length} phonotactic generation(s). They will presist locally on this device.`}
-              </p>
-              {bookmarks.length > 0 && (
+        {/* Center Main Feed Area */}
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* Top Info Bar */}
+          <div className="border-border bg-muted/20 flex shrink-0 items-center justify-between border-b px-4 py-2.5 sm:px-6">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground font-sans text-xs font-semibold tracking-wider uppercase">
+                {mode === "bookmarks" ? "Saved Directory" : "Results Feed"}
+              </span>
+              <Badge variant="muted" className="tabular-nums">
+                {mode === "bookmarks"
+                  ? `${sortedBookmarks.length} bookmarked`
+                  : totalCount > 0
+                    ? `${totalCount.toLocaleString()} words`
+                    : "0 words"}
+              </Badge>
+              {defOnly && (
+                <Badge variant="default" className="text-[10px]">
+                  defined only
+                </Badge>
+              )}
+            </div>
+
+            {mode === "bookmarks" && bookmarks.length > 0 && (
+              <div className="flex items-center gap-2">
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportBookmarks}
+                  className={cn(
+                    "h-7 text-xs gap-1.5 transition-[transform,background-color,border-color,color] duration-150 ease-out",
+                    isExported &&
+                      "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15",
+                  )}
+                >
+                  <span className="relative flex items-center justify-center">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {isExported ? (
+                        <motion.span
+                          key="exported"
+                          initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                          animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                          exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                          transition={criticallyDampedSpring}
+                          className="flex items-center justify-center text-emerald-600 dark:text-emerald-400"
+                        >
+                          <Check className="h-3 w-3" />
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="download"
+                          initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                          animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                          exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                          transition={criticallyDampedSpring}
+                          className="flex items-center justify-center"
+                        >
+                          <Download className="h-3 w-3" />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </span>
+                  <span>{isExported ? "Exported!" : "Export"}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setBookmarks([])
                     localStorage.removeItem("wordloom_bookmarks")
+                    toast.info("Cleared saved collection")
                   }}
-                  variant="outline"
-                  className="mt-auto rounded-none border-[#1a1a1a] font-serif text-xs tracking-widest uppercase"
+                  className="text-destructive hover:text-destructive h-7 text-xs"
                 >
-                  Clear All
+                  Clear
                 </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Results Container */}
-        <div className="min-h-0 min-w-0 flex-1 bg-white">
-          <div className="flex h-full min-h-0">
-            {/* Feed Section */}
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col p-6 lg:p-8">
-              <div className="mb-6 flex shrink-0 items-center justify-between border-b border-[#1a1a1a] pb-4">
-                <h2 className="font-sans text-sm font-semibold tracking-widest uppercase opacity-60">
-                  {mode === "bookmarks" ? "Saved Directory" : "Result Feed"}
-                </h2>
-                <span className="bg-[#ecebe5] px-2 py-1 font-mono text-xs text-[#1a1a1a] uppercase">
-                  {mode === "bookmarks"
-                    ? `${bookmarks.length} saved`
-                    : totalCount > 0
-                      ? `${totalCount} found`
-                      : "Idle"}
-                </span>
               </div>
-
-              <div ref={scrollContainerRef} className="relative flex-1 overflow-y-auto pr-2">
-                {isPending && skip === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 opacity-30">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1a1a1a] border-t-transparent" />
-                    <p className="font-mono text-[10px] tracking-widest uppercase">
-                      Generating exhaustive set...
-                    </p>
-                  </div>
-                ) : displayedResults.length === 0 ? (
-                  <div className="flex h-full items-center justify-center opacity-30">
-                    <p className="font-serif text-2xl tracking-tighter uppercase">
-                      {mode === "bookmarks"
-                        ? "No Bookmarks"
-                        : hasSearched
-                          ? "No items found"
-                          : "Awaiting input..."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4 pb-12">
-                    <div className="space-y-12">
-                      {groupedResults ? (
-                        (() => {
-                          const entries = Object.entries(groupedResults).sort(([a], [b]) =>
-                            a.localeCompare(b),
-                          )
-                          return entries.map(([letter, items]) => (
-                            <section
-                              key={letter}
-                              data-letter={letter}
-                              className="-mt-4 space-y-4 pt-4"
-                            >
-                              <h3 className="flex h-8 w-8 items-center justify-center bg-[#1a1a1a] font-mono text-xs font-bold text-white">
-                                {letter}
-                              </h3>
-                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {items.map((item) => (
-                                  <ResultCard
-                                    key={item.name}
-                                    item={item}
-                                    isSaved={bookmarks.some((b) => b.name === item.name)}
-                                    isActive={availabilityTarget === item.name}
-                                    isCopied={copyFeedback?.name === item.name}
-                                    isBookmarkAnimating={bookmarkFeedback?.name === item.name}
-                                    copyFeedbackKey={copyFeedback?.key}
-                                    bookmarkFeedbackKey={bookmarkFeedback?.key}
-                                    onToggleBookmark={toggleBookmark}
-                                    onCopy={handleCopy}
-                                    onCheckAvailability={setAvailabilityTarget}
-                                  />
-                                ))}
-                              </div>
-                            </section>
-                          ))
-                        })()
-                      ) : (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          {displayedResults.map((item) => (
-                            <ResultCard
-                              key={item.name}
-                              item={item}
-                              isSaved={bookmarks.some((b) => b.name === item.name)}
-                              isActive={availabilityTarget === item.name}
-                              isCopied={copyFeedback?.name === item.name}
-                              isBookmarkAnimating={bookmarkFeedback?.name === item.name}
-                              copyFeedbackKey={copyFeedback?.key}
-                              bookmarkFeedbackKey={bookmarkFeedback?.key}
-                              onToggleBookmark={toggleBookmark}
-                              onCopy={handleCopy}
-                              onCheckAvailability={setAvailabilityTarget}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {mode !== "bookmarks" && hasMore && (
-                      <div ref={sentinelRef} className="flex flex-col items-center gap-4 py-12">
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1a1a1a] border-t-transparent" />
-                        <p className="font-mono text-[10px] uppercase opacity-40">
-                          Loading more possibilities...
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Desktop Availability Aside */}
-            <AnimatePresence initial={false}>
-              {availabilityTarget && (
-                <motion.aside
-                  key="availability-panel"
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 440, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={panelSpring}
-                  className="sticky top-0 hidden shrink-0 overflow-hidden border-l border-[#1a1a1a] bg-[#fbfaf5] md:flex"
-                >
-                  <motion.div
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 12 }}
-                    transition={{ ...panelSpring, delay: 0.08 }}
-                    className="flex w-[420px] flex-col p-6 lg:p-8"
-                  >
-                    <div className="flex items-start justify-between gap-4 border-b border-[#1a1a1a] pb-4">
-                      <div>
-                        <p className="font-mono text-[10px] tracking-[0.2em] text-[#1a1a1a]/60 uppercase">
-                          Availability Check
-                        </p>
-                        <motion.h3
-                          key={availabilityTarget}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ ...panelSpring, delay: 0.12 }}
-                          className="font-serif text-3xl font-bold tracking-tight text-[#1a1a1a] lowercase"
-                        >
-                          {availabilityTarget}
-                        </motion.h3>
-                      </div>
-                      <motion.button
-                        type="button"
-                        whileHover={{ rotate: 90, scale: 1.05 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={fastSpring}
-                        onClick={() => setAvailabilityTarget(null)}
-                        className="cursor-pointer text-[#1a1a1a]"
-                        aria-label="Close availability check"
-                      >
-                        <X className="h-5 w-5" />
-                      </motion.button>
-                    </div>
-
-                    <p className="mt-4 font-sans text-sm text-[#1a1a1a]/70">
-                      The panel slides in so you can compare the generated list and availability
-                      targets side by side.
-                    </p>
-
-                    <div className="mt-6 grid gap-3">
-                      {availabilityLinks.map((link) => (
-                        <motion.a
-                          key={link.label}
-                          href={link.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.1, ease: "easeOut" }}
-                          whileHover={{
-                            x: 4,
-                            backgroundColor: "#1a1a1a",
-                            color: "#ecebe5",
-                            transition: { duration: 0.08, ease: "easeOut" },
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                          className="border border-[#1a1a1a] px-4 py-4 text-[#1a1a1a] transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-xs tracking-[0.18em] uppercase">
-                              {link.label}
-                            </span>
-                            <ExternalLink className="h-4 w-4" />
-                          </div>
-                          <p className="mt-2 font-sans text-sm opacity-70">
-                            {platformDescriptions[link.label]}
-                          </p>
-                        </motion.a>
-                      ))}
-                    </div>
-                  </motion.div>
-                </motion.aside>
-              )}
-            </AnimatePresence>
+            )}
           </div>
 
-          {/* Mobile Availability Panel */}
-          <AnimatePresence initial={false}>
-            {availabilityTarget && (
-              <motion.div
-                key="availability-mobile"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={spring}
-                className="overflow-hidden border-t border-[#1a1a1a] bg-[#f8f7f2] md:hidden"
-              >
-                <div className="flex items-start justify-between gap-4 border-b border-[#1a1a1a] p-6">
+          {/* Bookmarks Search Toolbar */}
+          {mode === "bookmarks" && (
+            <div className="border-border bg-card flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5 sm:px-6">
+              <div className="relative max-w-sm flex-1">
+                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                <Input
+                  placeholder="Filter saved names or definitions..."
+                  value={bookmarkSearch}
+                  onChange={(e) => setBookmarkSearch(e.target.value)}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
+
+              <div className="border-border/80 bg-muted/80 flex items-center rounded-lg border p-0.5 text-xs shadow-xs select-none">
+                <button
+                  type="button"
+                  onClick={() => setBookmarkSort("latest")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs outline-none transition-[color,background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring",
+                    bookmarkSort === "latest"
+                      ? "bg-foreground text-background font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground font-medium",
+                  )}
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Latest</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookmarkSort("alpha")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs outline-none transition-[color,background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring",
+                    bookmarkSort === "alpha"
+                      ? "bg-foreground text-background font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground font-medium",
+                  )}
+                >
+                  <ArrowDownAZ className="h-3.5 w-3.5" />
+                  <span>A-Z</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Feed Content Area with Progressive Blur & Fade */}
+          <div className="bg-muted/15 relative min-h-0 flex-1 overflow-hidden dark:bg-black/25">
+            {/* Top Progressive Blur & Fade */}
+            <div
+              aria-hidden="true"
+              className="from-background via-background/70 pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b to-transparent [mask-image:linear-gradient(to_bottom,black,transparent)] backdrop-blur-[2px]"
+            />
+
+            {/* Feed Content Grid */}
+            <div ref={scrollContainerRef} className="h-full overflow-y-auto px-4 py-6 sm:px-6">
+              {isPending && skip === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center gap-3">
+                  <div className="border-foreground h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+                  <span className="text-muted-foreground font-mono text-xs tracking-wider uppercase">
+                    Analyzing phonetic transitions...
+                  </span>
+                </div>
+              ) : displayedList.length === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+                  <div className="border-border bg-muted/50 text-muted-foreground flex h-10 w-10 items-center justify-center rounded-lg border">
+                    <Compass className="h-5 w-5" />
+                  </div>
                   <div>
-                    <p className="font-mono text-[10px] tracking-[0.2em] text-[#1a1a1a]/60 uppercase">
-                      Availability Check
+                    <h3 className="text-foreground font-sans text-sm font-bold">
+                      {mode === "bookmarks" ? "No bookmarks saved yet" : "No words found"}
+                    </h3>
+                    <p className="text-muted-foreground mt-1 max-w-sm font-sans text-xs">
+                      {mode === "bookmarks"
+                        ? "Bookmark names in Studio to store and review them here."
+                        : "Try loosening your prefix, suffix, or contains constraints."}
                     </p>
-                    <h3 className="font-serif text-3xl font-bold tracking-tight text-[#1a1a1a] lowercase">
-                      {availabilityTarget}
+                  </div>
+                  {mode === "bookmarks" ? (
+                    <Button size="sm" onClick={() => setMode("ui")} className="mt-2 text-xs">
+                      Return to Studio
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetFilters}
+                      className="mt-2 text-xs"
+                    >
+                      Reset constraints
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-8 pb-16">
+                  {groupedResults ? (
+                    Object.entries(groupedResults)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([letter, items]) => (
+                        <section key={letter} data-letter={letter} className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-foreground text-background flex h-6 w-6 items-center justify-center rounded font-mono text-xs font-bold">
+                              {letter}
+                            </span>
+                            <Separator className="flex-1" />
+                            <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
+                              {items.length} words
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {items.map((item) => (
+                              <ResultCard
+                                key={item.name}
+                                item={item}
+                                isSaved={bookmarks.some((b) => b.name === item.name)}
+                                isActive={availabilityTarget === item.name}
+                                isCopied={copiedName === item.name}
+                                onToggleBookmark={toggleBookmark}
+                                onCopy={handleCopy}
+                                onCheckAvailability={setAvailabilityTarget}
+                              />
+                            ))}
+                          </div>
+                        </section>
+                      ))
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {displayedList.map((item) => (
+                        <ResultCard
+                          key={item.name}
+                          item={item}
+                          isSaved={bookmarks.some((b) => b.name === item.name)}
+                          isActive={availabilityTarget === item.name}
+                          isCopied={copiedName === item.name}
+                          onToggleBookmark={toggleBookmark}
+                          onCopy={handleCopy}
+                          onCheckAvailability={setAvailabilityTarget}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Infinite Scroll Trigger */}
+                  {mode !== "bookmarks" && hasMore && (
+                    <div
+                      ref={sentinelRef}
+                      className="flex flex-col items-center justify-center py-6"
+                    >
+                      <div className="border-foreground h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
+                      <span className="text-muted-foreground mt-2 font-mono text-[11px]">
+                        Loading more words...
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Progressive Blur & Fade */}
+            <div
+              aria-hidden="true"
+              className="from-background via-background/70 pointer-events-none absolute inset-x-0 bottom-0 z-10 h-10 bg-gradient-to-t to-transparent [mask-image:linear-gradient(to_top,black,transparent)] backdrop-blur-[2px]"
+            />
+          </div>
+
+          {/* Bottom A-Z Alphabet Navigation Bar */}
+          {mode !== "bookmarks" && Object.keys(letterOffsets).length > 0 && (
+            <div className="border-border bg-card/90 shrink-0 border-t px-3 py-2 backdrop-blur-xs">
+              <div className="no-scrollbar mx-auto flex max-w-4xl items-center justify-between gap-1 overflow-x-auto">
+                {"abcdefghijklmnopqrstuvwxyz".split("").map((l) => {
+                  const isAvailable = letterOffsets[l] !== undefined && letterOffsets[l] !== -1
+                  const isActive = activeLetter === l
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      disabled={!isAvailable}
+                      onClick={() => jumpToLetter(l)}
+                      className={`flex h-7 min-w-6 items-center justify-center rounded font-mono text-xs uppercase transition-colors active:scale-[0.96] sm:flex-1 ${
+                        isActive
+                          ? "bg-foreground text-background font-bold shadow-xs"
+                          : isAvailable
+                            ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            : "text-muted-foreground cursor-not-allowed opacity-20"
+                      }`}
+                      title={
+                        isAvailable
+                          ? `Jump to ${l.toUpperCase()}`
+                          : `No names for ${l.toUpperCase()}`
+                      }
+                    >
+                      {l}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Desktop Availability Slide-over Inspector */}
+        <AnimatePresence initial={false}>
+          {availabilityTarget && selectedTargetItem && (
+            <motion.aside
+              key="desktop-inspector"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 360, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={criticallyDampedSpring}
+              className="border-border/80 bg-card/95 hidden shrink-0 flex-col overflow-y-auto border-l shadow-2xl backdrop-blur-md lg:flex dark:shadow-[inset_1px_0_0_0_rgba(255,255,255,0.07),-8px_0_28px_-8px_rgba(0,0,0,0.7)]"
+            >
+              <div className="flex w-[360px] flex-col p-6">
+                {/* Header */}
+                <div className="border-border flex items-start justify-between border-b pb-4">
+                  <div>
+                    <span className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
+                      Availability Inspector
+                    </span>
+                    <h3 className="text-foreground mt-1 font-sans text-3xl font-extrabold tracking-tight lowercase">
+                      {selectedTargetItem.name}
                     </h3>
                   </div>
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.9 }}
-                    transition={fastSpring}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setAvailabilityTarget(null)}
-                    className="text-[#1a1a1a]"
-                    aria-label="Close availability check"
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
+                    aria-label="Close inspector"
                   >
-                    <X className="h-5 w-5" />
-                  </motion.button>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="grid gap-3 p-6">
-                  {availabilityLinks.map((link) => (
-                    <motion.a
-                      key={link.label}
-                      href={link.href}
+
+                {/* Quick actions */}
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopy(selectedTargetItem.name)}
+                    className={cn(
+                      "flex-1 text-xs gap-1.5 transition-[transform,background-color,border-color,color] duration-150 ease-out",
+                      copiedName === selectedTargetItem.name &&
+                        "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15",
+                    )}
+                  >
+                    <span className="relative flex items-center justify-center">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {copiedName === selectedTargetItem.name ? (
+                          <motion.span
+                            key="copied"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center text-emerald-600 dark:text-emerald-400"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="copy"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </span>
+                    <span>{copiedName === selectedTargetItem.name ? "Copied!" : "Copy Name"}</span>
+                  </Button>
+
+                  <Button
+                    variant={
+                      bookmarks.some((b) => b.name === selectedTargetItem.name)
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => toggleBookmark(selectedTargetItem)}
+                    className="flex-1 gap-1.5 text-xs transition-[transform,background-color,border-color,color] duration-150 ease-out"
+                  >
+                    <span className="relative flex items-center justify-center">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {bookmarks.some((b) => b.name === selectedTargetItem.name) ? (
+                          <motion.span
+                            key="saved"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center"
+                          >
+                            <BookmarkCheck className="h-3.5 w-3.5 fill-current" />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="unsaved"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center"
+                          >
+                            <Bookmark className="h-3.5 w-3.5" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </span>
+                    <span>
+                      {bookmarks.some((b) => b.name === selectedTargetItem.name) ? "Saved" : "Save"}
+                    </span>
+                  </Button>
+                </div>
+
+                {/* Meaning section */}
+                {selectedTargetItem.meaning && (
+                  <div className="border-border bg-muted/30 mt-5 rounded-lg border p-3.5">
+                    <span className="text-foreground font-mono text-[10px] font-semibold uppercase">
+                      WordNet Meaning
+                    </span>
+                    <p className="text-muted-foreground mt-1 font-sans text-xs leading-relaxed text-pretty">
+                      {selectedTargetItem.meaning}
+                    </p>
+                  </div>
+                )}
+
+                {/* Platform checks list */}
+                <div className="mt-6 space-y-2">
+                  <span className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
+                    Live Platform Checks
+                  </span>
+
+                  {platformDirectory.map((p) => (
+                    <a
+                      key={p.name}
+                      href={p.getUrl(selectedTargetItem.name)}
                       target="_blank"
-                      rel="noreferrer"
-                      whileTap={{ scale: 0.985 }}
-                      whileHover={{
-                        backgroundColor: "#1a1a1a",
-                        color: "#ecebe5",
-                        transition: { duration: 0.08, ease: "easeOut" },
-                      }}
-                      className="border border-[#1a1a1a] px-4 py-4 text-[#1a1a1a]"
+                      rel="noopener noreferrer"
+                      className="group border-border bg-card hover:border-foreground/30 hover:bg-muted/40 flex flex-col rounded-lg border p-3 transition-colors"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs tracking-[0.18em] uppercase">
-                          {link.label}
+                        <span className="text-foreground font-sans text-xs font-semibold">
+                          {p.name}
                         </span>
-                        <ExternalLink className="h-4 w-4" />
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="muted" className="h-4 px-1 py-0 text-[9px]">
+                            {p.badge}
+                          </Badge>
+                          <ExternalLink className="text-muted-foreground group-hover:text-foreground h-3 w-3 transition-colors" />
+                        </div>
                       </div>
-                      <p className="mt-2 font-sans text-sm opacity-70">
-                        {platformDescriptions[link.label]}
-                      </p>
-                    </motion.a>
+                      <span className="text-muted-foreground mt-1 font-sans text-[11px]">
+                        {p.desc}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Availability Bottom Sheet */}
+        <AnimatePresence initial={false}>
+          {availabilityTarget && selectedTargetItem && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => setAvailabilityTarget(null)}
+                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs lg:hidden"
+              />
+              <motion.div
+                initial={{ transform: "translateY(100%)" }}
+                animate={{ transform: "translateY(0%)" }}
+                exit={{ transform: "translateY(100%)" }}
+                transition={mobileSheetSpring}
+                className="border-border bg-card fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t p-5 shadow-2xl lg:hidden"
+              >
+                <div className="bg-muted-foreground/30 mx-auto mb-3 h-1 w-10 rounded-full" />
+                <div className="border-border flex items-start justify-between border-b pb-3">
+                  <div>
+                    <span className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
+                      Availability Check
+                    </span>
+                    <h3 className="text-foreground mt-0.5 font-sans text-2xl font-bold lowercase">
+                      {selectedTargetItem.name}
+                    </h3>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setAvailabilityTarget(null)}
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopy(selectedTargetItem.name)}
+                    className={cn(
+                      "flex-1 text-xs gap-1.5 transition-[transform,background-color,border-color,color] duration-150 ease-out",
+                      copiedName === selectedTargetItem.name &&
+                        "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15",
+                    )}
+                  >
+                    <span className="relative flex items-center justify-center">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {copiedName === selectedTargetItem.name ? (
+                          <motion.span
+                            key="copied"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center text-emerald-600 dark:text-emerald-400"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="copy"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </span>
+                    <span>{copiedName === selectedTargetItem.name ? "Copied!" : "Copy Name"}</span>
+                  </Button>
+
+                  <Button
+                    variant={
+                      bookmarks.some((b) => b.name === selectedTargetItem.name)
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => toggleBookmark(selectedTargetItem)}
+                    className="flex-1 gap-1.5 text-xs transition-[transform,background-color,border-color,color] duration-150 ease-out"
+                  >
+                    <span className="relative flex items-center justify-center">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {bookmarks.some((b) => b.name === selectedTargetItem.name) ? (
+                          <motion.span
+                            key="saved"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center"
+                          >
+                            <BookmarkCheck className="h-3.5 w-3.5 fill-current" />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="unsaved"
+                            initial={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                            exit={{ scale: 0.25, opacity: 0, filter: "blur(4px)" }}
+                            transition={criticallyDampedSpring}
+                            className="flex items-center justify-center"
+                          >
+                            <Bookmark className="h-3.5 w-3.5" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </span>
+                    <span>
+                      {bookmarks.some((b) => b.name === selectedTargetItem.name) ? "Saved" : "Save"}
+                    </span>
+                  </Button>
+                </div>
+
+                {selectedTargetItem.meaning && (
+                  <div className="border-border bg-muted/30 mt-4 rounded-lg border p-3">
+                    <span className="text-foreground font-mono text-[10px] font-semibold uppercase">
+                      WordNet Definition
+                    </span>
+                    <p className="text-muted-foreground mt-1 font-sans text-xs leading-relaxed">
+                      {selectedTargetItem.meaning}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 grid gap-2">
+                  {platformDirectory.map((p) => (
+                    <a
+                      key={p.name}
+                      href={p.getUrl(selectedTargetItem.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="border-border bg-card text-foreground hover:bg-muted/40 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-sans text-xs font-semibold">{p.name}</span>
+                        <span className="text-muted-foreground font-sans text-[10px]">
+                          {p.desc}
+                        </span>
+                      </div>
+                      <ExternalLink className="text-muted-foreground h-4 w-4" />
+                    </a>
                   ))}
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
-      {mode !== "bookmarks" && Object.keys(letterOffsets).length > 0 && (
-        <div className="z-30 shrink-0 border-t border-[#1a1a1a] bg-white px-8 pt-4 pb-6">
-          <div className="mx-auto flex w-full max-w-7xl flex-row flex-nowrap items-center justify-between">
-            {"abcdefghijklmnopqrstuvwxyz".split("").map((l) => {
-              const isAvailable = letterOffsets[l] !== undefined && letterOffsets[l] !== -1
-              return (
-                <button
-                  key={l}
-                  disabled={!isAvailable}
-                  onClick={() => jumpToLetter(l)}
-                  className={`flex-1 border-none bg-transparent px-0.5 text-center font-mono text-[11px] uppercase transition-all ${
-                    activeLetter === l
-                      ? "scale-110 font-extrabold text-black"
-                      : isAvailable
-                        ? "text-neutral-500 hover:text-black"
-                        : "cursor-not-allowed text-neutral-300"
-                  } `}
-                >
-                  <span className={!isAvailable ? "line-through opacity-40" : ""}>{l}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
