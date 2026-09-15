@@ -1,4 +1,4 @@
-# Wordloom Studio — Design System & Micro-Interactions Specification
+# Wordloom Studio: Design System & Micro-Interactions Specification
 
 This document defines the comprehensive UI/UX architecture, typography, color tokens, and micro-interaction engineering for **Wordloom Studio**. It synthesizes principles from:
 

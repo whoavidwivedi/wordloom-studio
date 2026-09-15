@@ -61,7 +61,7 @@ export default function LandingPage() {
                 Studio
               </Link>
               <a
-                href="https://github.com/nrjdalal/wordloom"
+                href="https://github.com/nrjdalal/wordloom#readme"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-foreground transition-colors"
@@ -69,7 +69,7 @@ export default function LandingPage() {
                 CLI Specs
               </a>
               <a
-                href="https://github.com/whoavidwivedi/wordloom-studio"
+                href="https://github.com/nrjdalal/wordloom"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-foreground transition-colors"
@@ -139,11 +139,7 @@ export default function LandingPage() {
             </Button>
 
             <Button asChild variant="outline" size="lg" className="h-11 px-5 text-sm font-medium">
-              <a
-                href="https://github.com/whoavidwivedi/wordloom-studio"
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a href="https://github.com/nrjdalal/wordloom" target="_blank" rel="noreferrer">
                 <RiGithubFill className="mr-2 h-4 w-4" />
                 <span>GitHub Repository</span>
               </a>
@@ -325,7 +321,7 @@ export default function LandingPage() {
 
           <div className="text-muted-foreground flex items-center gap-4 text-xs">
             <a
-              href="https://github.com/whoavidwivedi/wordloom-studio"
+              href="https://github.com/nrjdalal/wordloom"
               target="_blank"
               rel="noreferrer"
               className="hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
