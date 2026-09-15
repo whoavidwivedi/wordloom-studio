@@ -1,15 +1,16 @@
 import type { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wordloom-studio.vercel.app"
   return [
     {
-      url: "https://wordloom.nrjdalal.com",
+      url: baseUrl,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 1,
     },
     {
-      url: "https://wordloom.nrjdalal.com/studio",
+      url: `${baseUrl}/studio`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,

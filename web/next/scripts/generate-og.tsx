@@ -14,7 +14,7 @@ async function generate() {
         justifyContent: "space-between",
         backgroundColor: "#09090b",
         backgroundImage:
-          "radial-gradient(circle 800px at 50% -80px, rgba(255, 255, 255, 0.09), transparent 70%), radial-gradient(circle 600px at 85% 100%, rgba(255, 255, 255, 0.04), transparent 60%)",
+          "radial-gradient(circle 800px at 50% -80px, rgba(255, 255, 255, 0.10), transparent 70%), radial-gradient(circle 600px at 90% 100%, rgba(255, 255, 255, 0.05), transparent 60%)",
         padding: "54px 64px 46px 64px",
         fontFamily: "system-ui, -apple-system, sans-serif",
         color: "#ffffff",
@@ -22,7 +22,7 @@ async function generate() {
         overflow: "hidden",
       }}
     >
-      {/* Subtle grid background */}
+      {/* Subtle technical grid background */}
       <div
         style={{
           position: "absolute",
@@ -31,20 +31,19 @@ async function generate() {
           right: 0,
           bottom: 0,
           backgroundImage:
-            "linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-          opacity: 0.8,
+            "linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px)",
+          backgroundSize: "44px 44px",
+          opacity: 0.85,
         }}
       />
 
-      {/* Top Navbar lockup */}
+      {/* Top Navbar Lockup */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           position: "relative",
-          zIndex: 10,
         }}
       >
         {/* Logo + Title */}
@@ -52,12 +51,12 @@ async function generate() {
           {/* Circular W Icon */}
           <div
             style={{
-              width: "42px",
-              height: "42px",
+              width: "44px",
+              height: "44px",
               borderRadius: "50%",
               background: "linear-gradient(145deg, #27272a, #09090b)",
-              border: "1px solid rgba(255, 255, 255, 0.22)",
-              boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5)",
+              border: "1px solid rgba(255, 255, 255, 0.24)",
+              boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.28), 0 4px 14px rgba(0, 0, 0, 0.6)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -75,7 +74,7 @@ async function generate() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-            <span style={{ fontSize: "24px", fontWeight: 700, letterSpacing: "-0.03em" }}>
+            <span style={{ fontSize: "25px", fontWeight: 800, letterSpacing: "-0.03em" }}>
               Wordloom
             </span>
             <span
@@ -83,11 +82,11 @@ async function generate() {
                 fontSize: "12px",
                 fontFamily: "monospace",
                 fontWeight: 600,
-                color: "#a1a1aa",
-                background: "rgba(255, 255, 255, 0.07)",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
+                color: "#d4d4d8",
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
                 borderRadius: "5px",
-                padding: "2px 7px",
+                padding: "2px 8px",
                 letterSpacing: "-0.01em",
               }}
             >
@@ -102,14 +101,14 @@ async function generate() {
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            background: "rgba(24, 24, 27, 0.8)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
+            background: "rgba(24, 24, 27, 0.85)",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
             borderRadius: "9999px",
             padding: "6px 14px",
             fontSize: "12px",
             fontFamily: "monospace",
             color: "#a1a1aa",
-            boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.08)",
+            boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
           }}
         >
           <div
@@ -118,11 +117,11 @@ async function generate() {
               height: "7px",
               borderRadius: "50%",
               background: "#10b981",
-              boxShadow: "0 0 8px #10b981",
+              boxShadow: "0 0 10px #10b981",
             }}
           />
-          <span>CMU Phonotactic Model</span>
-          <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>|</span>
+          <span style={{ color: "#e4e4e7" }}>CMU Phonotactic Model</span>
+          <span style={{ color: "rgba(255, 255, 255, 0.25)" }}>|</span>
           <span>100k+ Corpus</span>
         </div>
       </div>
@@ -132,20 +131,19 @@ async function generate() {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "12px",
+          gap: "10px",
           position: "relative",
-          zIndex: 10,
-          marginTop: "16px",
+          marginTop: "12px",
         }}
       >
         <div
           style={{
             fontSize: "48px",
             fontWeight: 800,
-            lineHeight: 1.1,
+            lineHeight: 1.12,
             letterSpacing: "-0.035em",
             color: "#fafafa",
-            maxWidth: "1020px",
+            maxWidth: "1040px",
           }}
         >
           Find short, pronounceable names that sound like real words.
@@ -169,14 +167,13 @@ async function generate() {
         style={{
           display: "flex",
           flexDirection: "column",
-          background: "rgba(18, 18, 22, 0.85)",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
+          background: "rgba(18, 18, 22, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
           borderRadius: "14px",
           boxShadow:
-            "inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 14px 40px -8px rgba(0, 0, 0, 0.8)",
+            "inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 16px 44px -8px rgba(0, 0, 0, 0.8)",
           overflow: "hidden",
           position: "relative",
-          zIndex: 10,
         }}
       >
         {/* Card Header */}
@@ -202,6 +199,7 @@ async function generate() {
                 borderRadius: "4px",
                 padding: "1px 6px",
                 fontSize: "10px",
+                color: "#d4d4d8",
               }}
             >
               5-6 chars
@@ -238,7 +236,7 @@ async function generate() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "24px",
+                  fontSize: "26px",
                   fontWeight: 800,
                   letterSpacing: "-0.03em",
                   color: "#ffffff",
@@ -282,7 +280,7 @@ async function generate() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "24px",
+                  fontSize: "26px",
                   fontWeight: 800,
                   letterSpacing: "-0.03em",
                   color: "#ffffff",
@@ -326,7 +324,7 @@ async function generate() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "24px",
+                  fontSize: "26px",
                   fontWeight: 800,
                   letterSpacing: "-0.03em",
                   color: "#ffffff",
@@ -362,7 +360,6 @@ async function generate() {
           alignItems: "center",
           justifyContent: "space-between",
           position: "relative",
-          zIndex: 10,
           fontSize: "13px",
           color: "#71717a",
         }}
@@ -387,9 +384,9 @@ async function generate() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ color: "#a1a1aa", fontWeight: 500 }}>wordloom.nrjdalal.com</span>
-          <span>•</span>
-          <span>Crafted by Avi Dwivedi & Neeraj Dalal</span>
+          <span style={{ color: "#d4d4d8", fontWeight: 600 }}>wordloom-studio.vercel.app</span>
+          <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
+          <span style={{ color: "#a1a1aa" }}>Crafted by Avi Dwivedi</span>
         </div>
       </div>
     </div>,

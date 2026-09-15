@@ -5,8 +5,10 @@ import Background from "@/components/Background"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wordloom-studio.vercel.app"
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://wordloom.nrjdalal.com"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Wordloom Studio | Pronounceable Words",
     template: "%s | Wordloom Studio",
@@ -31,7 +33,7 @@ export const metadata: Metadata = {
     title: "Wordloom Studio | Pronounceable Words",
     description:
       "Find short, pronounceable names for brands, products, and projects. Every name sounds like it could be a real word.",
-    url: "https://wordloom.nrjdalal.com",
+    url: siteUrl,
     siteName: "Wordloom Studio",
     locale: "en_US",
     type: "website",
