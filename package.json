@@ -1,6 +1,6 @@
 {
   "name": "wordloom",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "description": "Find short, pronounceable names for brands, products, and projects.",
   "keywords": [
     "cli",
@@ -41,7 +41,7 @@
     "dev": "turbo dev --ui tui",
     "dev:cli": "tsdown --watch",
     "dev:web": "turbo dev --filter=@web/next --ui tui",
-    "derive:model": "node scripts/derive-cmudict-model.mjs && oxfmt bin/cmudict-model.ts bin/wordnet-definitions.ts",
+    "derive:model": "bun scripts/derive-cmudict-model.mjs && oxfmt bin/cmudict-model.ts bin/wordnet-definitions.ts",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "oxlint .",
