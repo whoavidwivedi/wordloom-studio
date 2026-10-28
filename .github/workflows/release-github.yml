@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Create GitHub Release
@@ -15,6 +19,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
+        with:
+          # Full history and tags, for the "since last release" compare link.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -24,10 +31,56 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      # The tag must match the version being released, so a typo can't publish
+      # notes for the wrong build.
+      - name: Check Tag Matches Version
+        run: |
+          version="$(jq -r .version package.json)"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+
+      - name: Lint, Format & Test
+        run: |
+          bun run lint
+          bun run format:check
+          bun run test
+
       - name: Build
         run: bun run build
+
+      # Notes come from the matching "## x.y.z" section of CHANGELOG.md.
+      - name: Extract Release Notes
+        id: notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## " v "( |$)" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "::error::CHANGELOG.md has no '## ${version}' section"
+            exit 1
+          fi
+          {
+            echo ""
+            echo "**Web app**: [wordloom-studio.vercel.app](https://wordloom-studio.vercel.app)"
+            echo "**CLI**: [nrjdalal/wordloom](https://github.com/nrjdalal/wordloom)"
+            echo ""
+            echo "**Full changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || echo "${GITHUB_REF_NAME}")...${GITHUB_REF_NAME}"
+          } >> RELEASE_NOTES.md
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+
+      # The packed CLI, installable with `npm install -g ./wordloom-x.y.z.tgz`.
+      - name: Pack CLI
+        run: npm pack
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          name: Wordloom Studio ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ steps.notes.outputs.prerelease }}
+          files: wordloom-*.tgz
