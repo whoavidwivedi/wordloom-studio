@@ -13,6 +13,10 @@ type PrefixValidation = {
 export type GenerationPlan = {
   count: number
   names: Generator<string>
+  /** Names after the first `skip`, jumping whole subtrees by their counts instead of walking them. */
+  namesFrom: (skip: number) => Generator<string>
+  /** How many names continue the prefix with each next character, in alphabetical order. */
+  branchCounts: () => Map<string, number>
 }
 
 const listNextCharacters = (context: string) =>
@@ -212,6 +216,8 @@ export const createGenerationPlan = (
     suffixState: number,
     containsState: number,
     containsMatched: boolean,
+    // Names still to pass over before yielding: whole subtrees are jumped by their counts.
+    skipState: { remaining: number },
   ): Generator<string> {
     if (remainingLength === 0) {
       if (
@@ -219,6 +225,11 @@ export const createGenerationPlan = (
         suffixMatches(suffix, suffixState) &&
         containsMatches(contains, containsMatched)
       ) {
+        if (skipState.remaining > 0) {
+          skipState.remaining -= 1
+          return
+        }
+
         yield currentName
       }
 
@@ -241,15 +252,20 @@ export const createGenerationPlan = (
         character,
       )
 
-      if (
-        !countCompletions(
-          remainingLength - 1,
-          nextContext,
-          nextSuffixState,
-          nextContainsProgress.state,
-          nextContainsProgress.matched,
-        )
-      ) {
+      const branchCount = countCompletions(
+        remainingLength - 1,
+        nextContext,
+        nextSuffixState,
+        nextContainsProgress.state,
+        nextContainsProgress.matched,
+      )
+
+      if (!branchCount) {
+        continue
+      }
+
+      if (branchCount <= skipState.remaining) {
+        skipState.remaining -= branchCount
         continue
       }
 
@@ -260,6 +276,7 @@ export const createGenerationPlan = (
         nextSuffixState,
         nextContainsProgress.state,
         nextContainsProgress.matched,
+        skipState,
       )
     }
   }
@@ -274,18 +291,57 @@ export const createGenerationPlan = (
       )
     : 0
 
+  const namesFrom = (skip: number): Generator<string> => {
+    if (count === 0 || skip >= count) {
+      return emptyNames()
+    }
+
+    return generateNames(
+      targetLength - prefix.length,
+      prefixValidation.context,
+      prefix,
+      prefixValidation.suffixState,
+      prefixValidation.containsState,
+      prefixValidation.containsMatched,
+      { remaining: Math.max(0, skip) },
+    )
+  }
+
+  const branchCounts = () => {
+    const counts = new Map<string, number>()
+
+    if (count === 0 || targetLength <= prefix.length) {
+      return counts
+    }
+
+    for (const character of listNextCharacters(prefixValidation.context)) {
+      const nextContainsProgress = advanceContainsProgress(
+        contains,
+        containsFailureTable,
+        prefixValidation.containsMatched,
+        prefixValidation.containsState,
+        character,
+      )
+      const branchCount = countCompletions(
+        targetLength - prefix.length - 1,
+        advanceContext(prefixValidation.context, character),
+        advancePatternState(suffix, suffixFailureTable, prefixValidation.suffixState, character),
+        nextContainsProgress.state,
+        nextContainsProgress.matched,
+      )
+
+      if (branchCount) {
+        counts.set(character, branchCount)
+      }
+    }
+
+    return counts
+  }
+
   return {
     count,
-    names:
-      count === 0
-        ? emptyNames()
-        : generateNames(
-            targetLength - prefix.length,
-            prefixValidation.context,
-            prefix,
-            prefixValidation.suffixState,
-            prefixValidation.containsState,
-            prefixValidation.containsMatched,
-          ),
+    names: namesFrom(0),
+    namesFrom,
+    branchCounts,
   }
 }

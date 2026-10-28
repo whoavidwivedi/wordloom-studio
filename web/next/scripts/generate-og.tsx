@@ -3,8 +3,34 @@ import path from "path"
 
 import { ImageResponse } from "next/og"
 
+// Renders public/og-image.png (1200×630) in the landing page's style.
+// Run: bun scripts/generate-og.tsx (from web/next)
+
+const BG = "#0d0f12"
+const FG = "#f7f8f9"
+const MUTED = "#a3a7ae"
+const SUBTLE = "#6b7078"
+const BORDER = "rgba(255,255,255,0.09)"
+const ACTION = "#10b981"
+
+// Famous startup names that Wordloom's generator produces (from the landing
+// page's brand section).
+const BRANDS = ["stripe", "notion", "slack", "zapier", "dropbox", "uber"]
+
+// Satori reads TTF/OTF/WOFF (not WOFF2); an old user agent makes Google Fonts serve TTF.
+async function loadInter(weight: number) {
+  const css = await fetch(`https://fonts.googleapis.com/css2?family=Inter:wght@${weight}`, {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/534.30" },
+  }).then((r) => r.text())
+  const url = css.match(/src: url\((.+?)\)/)?.[1]
+  if (!url) throw new Error(`No font URL for Inter ${weight}`)
+  return fetch(url).then((r) => r.arrayBuffer())
+}
+
 async function generate() {
-  const ogImage = new ImageResponse(
+  const [inter500, inter600] = await Promise.all([loadInter(500), loadInter(600)])
+
+  const image = new ImageResponse(
     <div
       style={{
         width: "100%",
@@ -12,32 +38,46 @@ async function generate() {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        backgroundColor: "#09090b",
-        backgroundImage:
-          "radial-gradient(circle 800px at 50% -80px, rgba(255, 255, 255, 0.10), transparent 70%), radial-gradient(circle 600px at 90% 100%, rgba(255, 255, 255, 0.05), transparent 60%)",
-        padding: "54px 64px 46px 64px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        color: "#ffffff",
+        backgroundColor: BG,
+        padding: "56px 72px 52px",
+        fontFamily: "Inter",
+        color: FG,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Subtle technical grid background */}
+      {/* Grid, faded toward the edges */}
       <div
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          inset: 0,
+          backgroundImage: `linear-gradient(to right, ${BORDER} 1px, transparent 1px), linear-gradient(to bottom, ${BORDER} 1px, transparent 1px)`,
+          backgroundSize: "48px 48px",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `radial-gradient(ellipse 75% 70% at 50% 0%, transparent 10%, ${BG} 75%)`,
+        }}
+      />
+      {/* Spotlight */}
+      <div
+        style={{
+          position: "absolute",
+          top: -260,
+          left: -180,
+          width: 900,
+          height: 620,
+          borderRadius: "50%",
           backgroundImage:
-            "linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px)",
-          backgroundSize: "44px 44px",
-          opacity: 0.85,
+            "radial-gradient(ellipse at center, rgba(255,255,255,0.16), rgba(255,255,255,0) 65%)",
+          transform: "rotate(-24deg)",
         }}
       />
 
-      {/* Top Navbar Lockup */}
+      {/* Top row */}
       <div
         style={{
           display: "flex",
@@ -46,362 +86,148 @@ async function generate() {
           position: "relative",
         }}
       >
-        {/* Logo + Title */}
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          {/* Circular W Icon */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
             style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "50%",
-              background: "linear-gradient(145deg, #27272a, #09090b)",
-              border: "1px solid rgba(255, 255, 255, 0.24)",
-              boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.28), 0 4px 14px rgba(0, 0, 0, 0.6)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-              <path
-                d="M5 9L9.5 23L16 11.5L22.5 23L27 9"
-                stroke="#ffffff"
-                strokeWidth="3.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-            <span style={{ fontSize: "25px", fontWeight: 800, letterSpacing: "-0.03em" }}>
-              Wordloom
-            </span>
-            <span
-              style={{
-                fontSize: "12px",
-                fontFamily: "monospace",
-                fontWeight: 600,
-                color: "#d4d4d8",
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                borderRadius: "5px",
-                padding: "2px 8px",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Studio
-            </span>
-          </div>
-        </div>
-
-        {/* Model Status Pill */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "rgba(24, 24, 27, 0.85)",
-            border: "1px solid rgba(255, 255, 255, 0.14)",
-            borderRadius: "9999px",
-            padding: "6px 14px",
-            fontSize: "12px",
-            fontFamily: "monospace",
-            color: "#a1a1aa",
-            boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-          }}
-        >
-          <div
-            style={{
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
-              background: "#10b981",
-              boxShadow: "0 0 10px #10b981",
+              width: 34,
+              height: 34,
+              borderRadius: 999,
+              backgroundImage:
+                "radial-gradient(circle at 36% 28%, rgba(255,255,255,0.45), rgba(255,255,255,0) 55%), linear-gradient(135deg, #6ee7b7, #10b981 50%, #047857)",
+              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.18)",
             }}
           />
-          <span style={{ color: "#e4e4e7" }}>CMU Phonotactic Model</span>
-          <span style={{ color: "rgba(255, 255, 255, 0.25)" }}>|</span>
-          <span>100k+ Corpus</span>
+          <div style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-0.04em" }}>wordloom</div>
         </div>
-      </div>
-
-      {/* Center Content: Headline & Subheadline */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          position: "relative",
-          marginTop: "12px",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "48px",
-            fontWeight: 800,
-            lineHeight: 1.12,
-            letterSpacing: "-0.035em",
-            color: "#fafafa",
-            maxWidth: "1040px",
-          }}
-        >
-          Find short, pronounceable names that sound like real words.
-        </div>
-        <div
-          style={{
-            fontSize: "20px",
-            color: "#a1a1aa",
-            lineHeight: 1.4,
-            maxWidth: "880px",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Built on English phonetic letter transitions and cross-referenced with WordNet
-          definitions.
-        </div>
-      </div>
-
-      {/* Workbench Card Preview */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          background: "rgba(18, 18, 22, 0.9)",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
-          borderRadius: "14px",
-          boxShadow:
-            "inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 16px 44px -8px rgba(0, 0, 0, 0.8)",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        {/* Card Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: "10px 18px",
-            background: "rgba(255, 255, 255, 0.03)",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-            fontSize: "12px",
-            fontFamily: "monospace",
-            color: "#a1a1aa",
+            gap: 10,
+            border: `1px solid ${BORDER}`,
+            backgroundColor: "rgba(22,24,28,0.8)",
+            borderRadius: 999,
+            padding: "6px 16px 6px 6px",
+            fontSize: 18,
+            color: MUTED,
+            fontWeight: 500,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ color: "#ffffff", fontWeight: 600 }}>Phonotactic Synthesis</span>
-            <span
+          <div
+            style={{
+              backgroundColor: FG,
+              color: BG,
+              borderRadius: 999,
+              padding: "3px 10px",
+              fontSize: 15,
+              fontWeight: 600,
+            }}
+          >
+            Free
+          </div>
+          No sign-up, open source
+        </div>
+      </div>
+
+      {/* Headline */}
+      <div style={{ display: "flex", flexDirection: "column", position: "relative" }}>
+        <div
+          style={{
+            fontSize: 84,
+            fontWeight: 600,
+            letterSpacing: "-0.045em",
+            lineHeight: 1.02,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <span>Find a name for</span>
+          <span>your startup.</span>
+        </div>
+        <div
+          style={{
+            marginTop: 22,
+            fontSize: 27,
+            color: MUTED,
+            fontWeight: 500,
+            letterSpacing: "-0.01em",
+            maxWidth: 820,
+          }}
+        >
+          Short, pronounceable names that sound like real words.
+        </div>
+      </div>
+
+      {/* Brand names the generator produces, in the landing page's bordered grid */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 19,
+            fontWeight: 500,
+            color: SUBTLE,
+          }}
+        >
+          <span>Famous startup names Wordloom can generate</span>
+          <span>wordloom-studio.vercel.app</span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            borderTop: `1px solid ${BORDER}`,
+            borderLeft: `1px solid ${BORDER}`,
+          }}
+        >
+          {BRANDS.map((name, i) => (
+            <div
+              key={name}
               style={{
-                background: "rgba(255, 255, 255, 0.06)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "4px",
-                padding: "1px 6px",
-                fontSize: "10px",
-                color: "#d4d4d8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flex: 1,
+                height: 84,
+                padding: "0 20px",
+                borderRight: `1px solid ${BORDER}`,
+                borderBottom: `1px solid ${BORDER}`,
+                backgroundColor: i === 0 ? "rgba(16,185,129,0.08)" : "rgba(22,24,28,0.6)",
               }}
             >
-              5-6 chars
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ color: "#10b981", fontWeight: 600 }}>98% Pronounceable</span>
-            <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
-            <span>Instant Dictionary Match</span>
-          </div>
-        </div>
-
-        {/* Words Grid */}
-        <div
-          style={{
-            display: "flex",
-            padding: "16px 20px",
-            gap: "16px",
-          }}
-        >
-          {/* Word 1 */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: "5px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              padding: "12px 14px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span
                 style={{
-                  fontSize: "26px",
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#ffffff",
-                }}
-              >
-                lumin
-              </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontFamily: "monospace",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  border: "1px solid rgba(255, 255, 255, 0.14)",
-                  borderRadius: "4px",
-                  padding: "2px 6px",
-                  color: "#ffffff",
+                  fontSize: 30,
                   fontWeight: 600,
+                  letterSpacing: "-0.035em",
+                  color: i === 0 ? FG : "#d4d6da",
                 }}
               >
-                def
+                {name}
+              </span>
+              <span style={{ fontSize: 16, color: i === 0 ? ACTION : SUBTLE, fontWeight: 500 }}>
+                {name.length}
               </span>
             </div>
-            <span style={{ fontSize: "12px", color: "#a1a1aa", lineHeight: 1.3 }}>
-              a unit of luminous flux; radiant clarity
-            </span>
-          </div>
-
-          {/* Word 2 */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: "5px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              padding: "12px 14px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span
-                style={{
-                  fontSize: "26px",
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#ffffff",
-                }}
-              >
-                solis
-              </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontFamily: "monospace",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  border: "1px solid rgba(255, 255, 255, 0.14)",
-                  borderRadius: "4px",
-                  padding: "2px 6px",
-                  color: "#ffffff",
-                  fontWeight: 600,
-                }}
-              >
-                def
-              </span>
-            </div>
-            <span style={{ fontSize: "12px", color: "#a1a1aa", lineHeight: 1.3 }}>
-              solar illumination; radiating center
-            </span>
-          </div>
-
-          {/* Word 3 */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              gap: "5px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              padding: "12px 14px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span
-                style={{
-                  fontSize: "26px",
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#ffffff",
-                }}
-              >
-                velox
-              </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontFamily: "monospace",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "4px",
-                  padding: "2px 6px",
-                  color: "#71717a",
-                }}
-              >
-                neologism
-              </span>
-            </div>
-            <span style={{ fontSize: "12px", color: "#a1a1aa", lineHeight: 1.3 }}>
-              swift, agile, high-velocity motion
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          position: "relative",
-          fontSize: "13px",
-          color: "#71717a",
-        }}
-      >
-        {/* CLI hint */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "rgba(255, 255, 255, 0.04)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "6px",
-            padding: "5px 10px",
-            fontFamily: "monospace",
-            fontSize: "12px",
-            color: "#e4e4e7",
-          }}
-        >
-          <span style={{ color: "#71717a" }}>$</span>
-          <span>bunx wordloom -l 5 -p vo</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ color: "#d4d4d8", fontWeight: 600 }}>wordloom-studio.vercel.app</span>
-          <span style={{ color: "rgba(255, 255, 255, 0.2)" }}>•</span>
-          <span style={{ color: "#a1a1aa" }}>Crafted by Avi Dwivedi</span>
+          ))}
         </div>
       </div>
     </div>,
     {
       width: 1200,
       height: 630,
+      fonts: [
+        { name: "Inter", data: inter500, weight: 500, style: "normal" },
+        { name: "Inter", data: inter600, weight: 600, style: "normal" },
+      ],
     },
   )
 
-  const arrayBuffer = await ogImage.arrayBuffer()
-  const outputPath = path.resolve(process.cwd(), "public/og-image.png")
-  fs.writeFileSync(outputPath, Buffer.from(arrayBuffer))
-  console.log(
-    `Successfully generated OG image at: ${outputPath} (${fs.statSync(outputPath).size} bytes)`,
-  )
+  const outputPath = path.join(process.cwd(), "public", "og-image.png")
+  fs.writeFileSync(outputPath, Buffer.from(await image.arrayBuffer()))
+  console.log(`Wrote ${outputPath}`)
 }
 
-generate().catch(console.error)
+generate().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

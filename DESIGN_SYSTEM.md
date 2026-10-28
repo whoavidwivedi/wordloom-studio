@@ -1,138 +1,125 @@
-# Wordloom Studio: Design System & Micro-Interactions Specification
+# Wordloom Studio design system
 
-This document defines the comprehensive UI/UX architecture, typography, color tokens, and micro-interaction engineering for **Wordloom Studio**. It synthesizes principles from:
+The live reference is the `/design` page in the web app. It renders every token and component below from the real code. This document records the decisions behind it.
 
-- **Emil Kowalski Design Engineering** (`emil-design-eng`, `prototype`, `animation-vocabulary`, `review-animations`)
-- **Apple Fluid Interfaces** (`apple-design`)
-- **Shadcn/UI Design System** (`shadcn`, `baseline-ui`)
-- **Interface Polish & Craft** (`make-interfaces-feel-better`, `userinterface-wiki`, `impeccable`)
-- **Modern Color Science** (`oklch-skill`)
+Sources: Emil Kowalski's design-engineering rules for motion, shadcn/ui conventions for components (`cva` variants, `data-slot`, `cn`, Radix primitives), and the surface-button material shared with Better Space.
 
 ---
 
-## 1. Core Design Philosophy: Elimination of AI Tropes
+## 1. Principles
 
-### What We Avoid ("AI-Generated Aesthetics")
+- **One accent.** Emerald is the only saturated hue. It marks the primary action, focus, selection and positive states. Everything else is a cool, barely tinted neutral.
+- **Type does the hierarchy.** Size, weight and tracking separate levels before colour or boxes do.
+- **Fast by default.** Motion finishes under 300ms and eases out. Keyboard-driven changes don't animate. Nothing on the page needs a JavaScript animation runtime.
+- **Loaders earn their place.** A loader waits 150ms before appearing, so fast responses never flash one, and it stays at least 450ms once shown.
 
-- ❌ **No Sparkles icons** (`Sparkles` / `✨`) used as decorative filler.
-- ❌ **No saturated purple/indigo/pink gradient text** (`bg-gradient-to-r from-indigo-500 via-purple-500...`).
-- ❌ **No floating colored gradient blur blobs** in the background.
-- ❌ **No generic marketing buzzwords** or exaggerated copy.
-- ❌ **No sluggish easing** (`ease-in`) or gratuitous high-frequency motion.
+## 2. Tokens
 
-### What We Build ("Craft & Precision Engineering")
+All tokens live in `web/next/src/styles/globals.css`. They are exposed as Tailwind utilities through `@theme inline`.
 
-- **Monochromatic high-contrast typographic hierarchy**: Crisp black/zinc/white palette inspired by shadcn/ui, Linear, Vercel, and classic Swiss editorial design.
-- **Optical precision**: Concentric border radii, optical icon centering, size-specific tracking, and balanced text wrapping.
-- **Physics-grounded micro-interactions**: Tactile `scale(0.97)` on press, 1:1 pointer tracking, interruptible transitions, and zero animation on high-frequency keyboard operations.
-- **Responsive parity**: Engineered to feel like a native desktop app on PC and an intentional, thumb-friendly mobile app on phone screens.
+### Colour
 
----
+| Token                   | Role                                         |
+| :---------------------- | :------------------------------------------- |
+| `background`            | Page                                         |
+| `card`                  | Raised surfaces: cards, inputs, inspector    |
+| `sidebar`               | Studio configuration column                  |
+| `muted`                 | Tracks, wells, hover fills                   |
+| `foreground`            | Primary text                                 |
+| `muted-foreground`      | Secondary text                               |
+| `subtle-foreground`     | Hints, placeholders, tertiary metadata       |
+| `border`                | Hairlines                                    |
+| `border-strong`         | Hover borders, outline badges                |
+| `action`                | Emerald, the single accent                   |
+| `action-soft`           | Emerald tint for selection, focus and badges |
+| `success`/`destructive` | Feedback states                              |
 
-## 2. Color System: OKLCH & Semantic Tokens
+Values are OKLCH. Dark mode redefines the same names under `.dark`.
 
-Using OKLCH neutral scales to prevent hue drift and ensure predictable contrast ratios (WCAG AAA for body copy, AA for secondary text):
+### Typography
 
-### Light Mode Palette
+- **Sans: Inter.** It is self-hosted through `next/font` with the `opsz` axis, so headings switch to Inter Display on their own. The features `cv11`, `ss03` and `cv05` are on.
+- **Mono: JetBrains Mono.** It is used only for things people type or scan character by character: the prefix, suffix and contains fields, the A–Z dock, and keyboard keys.
 
-| Token                  | OKLCH Value             | Role                                       |
-| :--------------------- | :---------------------- | :----------------------------------------- |
-| `--background`         | `oklch(0.99 0.002 95)`  | Base background (warm, clean porcelain)    |
-| `--card`               | `oklch(1.00 0 0)`       | Pure white surface for cards and panels    |
-| `--foreground`         | `oklch(0.14 0.005 260)` | Primary high-contrast text                 |
-| `--muted`              | `oklch(0.96 0.003 260)` | Secondary background & inactive buttons    |
-| `--muted-foreground`   | `oklch(0.48 0.012 260)` | Supporting labels, descriptions, and hints |
-| `--border`             | `oklch(0.90 0.005 260)` | Structural 1px boundary lines              |
-| `--primary`            | `oklch(0.16 0.008 260)` | Solid black/charcoal primary accent        |
-| `--primary-foreground` | `oklch(0.99 0 0)`       | Inverted text on primary surfaces          |
+| Class          | Size / line-height | Tracking | Use                       |
+| :------------- | :----------------- | :------- | :------------------------ |
+| `text-display` | 64 / 1.02          | -0.042em | Landing headline          |
+| `text-title`   | 36 / 1.08          | -0.032em | Page and inspector titles |
+| `text-heading` | 20 / 1.3           | -0.02em  | Section and card headings |
+| `text-word`    | 24 / 1.12          | -0.028em | Generated names on cards  |
+| `text-body`    | 15 / 1.6           | -0.006em | Paragraphs                |
+| `text-small`   | 13 / 1.5           |          | UI text, descriptions     |
+| `text-caption` | 12 / 1.45          |          | Metadata, controls        |
+| `text-micro`   | 10 / 14 mono       |          | Badges, keys              |
 
-### Dark Mode Palette
+`cn()` registers these sizes with `tailwind-merge`, so `text-caption` correctly overrides `text-sm`.
 
-| Token                  | OKLCH Value             | Role                                          |
-| :--------------------- | :---------------------- | :-------------------------------------------- |
-| `--background`         | `oklch(0.11 0.006 260)` | Deep midnight obsidian background             |
-| `--card`               | `oklch(0.15 0.008 260)` | Slightly elevated card surface                |
-| `--foreground`         | `oklch(0.96 0.003 260)` | Crisp white primary text                      |
-| `--muted`              | `oklch(0.19 0.008 260)` | Subtle inactive surface                       |
-| `--muted-foreground`   | `oklch(0.58 0.010 260)` | Secondary text with guaranteed 4.5:1 contrast |
-| `--border`             | `oklch(0.23 0.008 260)` | Discrete 1px structural borders               |
-| `--primary`            | `oklch(0.96 0.003 260)` | Crisp white primary accent                    |
-| `--primary-foreground` | `oklch(0.12 0.006 260)` | Inverted text on primary surfaces             |
+### Radius, elevation, motion
 
----
+- **Radius:** `xs` 4, `sm` 6, `md` 8, `lg` 10, `xl` 14, `2xl` 18, `3xl` 24. A nested radius equals the outer radius minus the padding.
+- **Elevation:** `shadow-card`, `shadow-thumb`, `shadow-raised` and `shadow-overlay`. Dark mode replaces most of the drop shadow with a lit top edge.
+- **Durations:** `--duration-micro` 80ms, `quick` 150ms, `fast` 220ms, `sheet` 280ms.
+- **Curves:** `--ease-out` `cubic-bezier(0.23, 1, 0.32, 1)`, `--ease-drawer` `cubic-bezier(0.32, 0.72, 0, 1)`, and `--ease-surface` for buttons.
 
-## 3. Typography & Layout Rules
+## 3. Components (`web/next/src/components/ui`)
 
-### Font Stacks
+| Component                  | Notes                                                                                                                                                                                 |
+| :------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Button`                   | Surface material on `::before`. Variants: default (emerald), secondary, outline, ghost, destructive, link. Sizes from `xs` to `xl` plus icon sizes. `loading` shows the Remix loader. |
+| `Spinner`                  | Remix `RiLoader4Line`, spun. Pair it with `useDelayedPending` (`src/hooks`).                                                                                                          |
+| `SegmentedControl`         | Replaces tabs and radio groups. Works as `role="tablist"` or `radiogroup`. The selection thumb slides between options with `motion`'s `layoutId`; arrow-key changes jump instantly.   |
+| `Field` / `ClearableInput` | A label with an optional mono hint, and an input with an inline clear button.                                                                                                         |
+| `Input`                    | Card surface, emerald focus ring. 16px on phones to stop iOS zoom.                                                                                                                    |
+| `Badge`                    | default, action, outline, muted (mono), destructive.                                                                                                                                  |
+| `Card`                     | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`.                                                                                                    |
+| `Eyebrow`                  | Mono small-caps label.                                                                                                                                                                |
+| `Kbd`                      | Keyboard key. It inverts inside a primary button.                                                                                                                                     |
+| `BottomSheet`              | Always mounted, moves with `translate` only, `inert` while closed, closes on Escape and on a tap outside.                                                                             |
+| `EmptyState`               | Icon tile, title, description and an optional action.                                                                                                                                 |
+| `IconSwap`                 | Cross-fades two icons (opacity, scale, blur), so a re-click interrupts the transition.                                                                                                |
+| `CopyButton`               | Copies to the clipboard with inline confirmation.                                                                                                                                     |
+| `Separator`, `Label`       | Restyled Radix primitives.                                                                                                                                                            |
+| `DropdownMenu`             | shadcn/ui on Radix. Panels scale in from their trigger and close faster than they open.                                                                                               |
+| `NumberPopIn`              | Transitions.dev "Number pop-in" for counts. Rising values pop in from below, falling ones from above.                                                                                 |
 
-1. **Sans-Serif (`--font-sans`)**: `Plus Jakarta Sans`, `-apple-system`, `BlinkMacSystemFont`, `sans-serif`.
-   - Optical font smoothing: `-webkit-font-smoothing: antialiased`.
-   - Headings: `text-wrap: balance`, `letter-spacing: -0.025em`, `line-height: 1.15`.
-   - Body & Descriptions: `text-wrap: pretty`, `line-height: 1.5`.
-2. **Monospace (`--font-mono`)**: `JetBrains Mono`, `ui-monospace`, `Menlo`, `monospace`.
-   - Numeric counters, character counts, status indicators: `font-variant-numeric: tabular-nums`.
-   - Uppercase badges & code snippets: `letter-spacing: 0.08em`.
+Studio-specific pieces live in `components/studio`: `ResultCard` and `InspectorBody`.
 
-### Concentric Border Radius Formula
+### Aceternity UI (`components/aceternity`)
 
-Nested elements must satisfy:
-$$\text{Outer Radius} = \text{Inner Radius} + \text{Padding}$$
+These are adapted from ui.aceternity.com to the tokens above and used only on the landing page:
 
-- Card (`p-4`, 16px padding) with `rounded-xl` (12px inner) $\to$ Outer card container: `rounded-2xl` (28px) or nested controls scaled proportionally (`rounded-lg` inner inside `rounded-xl` card).
+- `Spotlight`: one sweep on load in dark mode, then still.
+- `GridBackground`: a token-coloured grid that fades out toward the edges.
+- `BentoGrid`: the feature grid.
+- `FlipWords`: rotates the tagline's last word. It loads only `motion`'s DOM features through `LazyMotion`, animates full `transform` strings so it stays on the GPU, and holds still with reduced motion on.
 
----
+### Brand
 
-## 4. Micro-Interactions & Animation Standards
+The logo is the wordmark alone: "wordloom", lowercase, semibold, tracked tight. The browser-tab favicon is a woven W, two V strands with the emerald one passing over the other.
 
-### 1. Tactile Button Press
+### Avoiding the generated look
 
-Every interactive button and card must provide immediate tactile confirmation upon pointer-down:
+- Labels are sentence case, never uppercase-tracked eyebrows.
+- Buttons say what happens ("Start naming") without a trailing arrow.
+- There are no dot-separated meta strings and no single accented word in headlines.
+- The landing page has one load moment: the spotlight sweep and the rotating word.
 
-```css
-.interactive-control {
-  transition-property: transform, background-color, border-color, color;
-  transition-duration: 140ms;
-  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
-}
-.interactive-control:active {
-  transform: scale(0.97);
-}
-```
+## 4. Motion rules
 
-_Never use a scale smaller than 0.95 (which feels cartoonish) or larger than 0.98 (which feels imperceptible)._
+1. **Press:** `scale(0.97)` over 150ms. Never go below 0.95.
+2. **Icon swaps:** opacity, scale from 0.25 and a 4px blur over 220ms ease-out. Both icons stay mounted.
+3. **Sheets:** `translate` over 280ms on the drawer curve. The backdrop fades over 220ms.
+4. **Inspector:** the panel mounts in the page flow at a fixed width, and only its contents slide in (16px, 220ms).
+5. **Keyboard:** `⌘↵`, `/`, `1`, `2` and letter jumps respond instantly with no animation.
+6. **Reduced motion:** fades that explain a change stay. Movement (translate, scale, blur and the sheet slide) is removed.
 
-### 2. Contextual Icon Morphing (Copy & Bookmark States)
+### Feedback without toasts
 
-Following `make-interfaces-feel-better` principle #7:
+There are no toast notifications. An action reports its progress on the control that started it. Export, for example, shows "Preparing…", then "Downloading…", then "Downloaded", holding each step long enough to read.
 
-- When toggling copy or bookmark feedback, cross-fade with `opacity`, `scale` (0.25 to 1.0), and `filter: blur` (4px to 0px).
-- Spring transition: `{ type: "spring", duration: 0.28, bounce: 0 }` (bounce must always be 0).
+## 5. Rendering budget
 
-### 3. Modals, Drawers & Sheets
-
-- **Desktop Side Inspector**: Slides smoothly from the right using an origin-aware spring (`{ type: "spring", stiffness: 260, damping: 28 }`).
-- **Mobile Bottom Sheet**: Slides up from bottom (`translateY(100%)` to `translateY(0)`), supports tap-outside dismiss and drag-down dismiss.
-- **Escape Key (`Esc`)**: Closes any open inspector or mobile sheet instantly without delay.
-
-### 4. High-Frequency Interaction Rule (Zero Latency)
-
-- Keyboard actions (`Enter` to generate, typing in prefix/suffix fields, letter jump hotkeys) must respond **instantly with 0ms artificial animation delay**.
-
----
-
-## 5. Responsive UX Architecture
-
-### Mobile Devices (< 768px)
-
-- **Top Header**: Compact title bar with direct Return button and theme toggle.
-- **Sticky Filter Status Bar**: Shows active length and constraints; tapping "Tune" opens a native-feeling bottom sheet with large 44px touch targets.
-- **Feed**: Full-width single column cards with generous touch hit areas, 1-tap copy, 1-tap save, and tap-to-inspect.
-- **A-Z Jump Dock**: Horizontal touch-scrolling letter bar with active letter highlight and available candidate counts.
-- **Availability Inspector**: Renders as an iOS-style bottom sheet with drag handle and direct platform links.
-
-### Desktop Devices (≥ 768px)
-
-- **Workbench Layout**:
-  - Left: Fixed 320px sidebar with length chips, slider, clearable input fields, real words toggle, and generate button.
-  - Center: Responsive 2- to 3-column feed with infinite scroll and alphabetical grouping.
-  - Right: Context-preserving slide-over inspector for deep-dive phonetics, WordNet definition, and live platform lookups (Domainr, GitHub, X, Instagram, YouTube).
+- Off-screen letter groups use `content-visibility: auto`.
+- Edge fades are plain gradients. Nothing uses `backdrop-filter` over scrolling content.
+- Result cards are memoized, take stable callbacks and look up bookmarks through a `Set`.
+- The landing page is a server component with small client islands: the theme toggle, the sample preview and the Enter hotkey.

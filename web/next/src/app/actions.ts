@@ -1,7 +1,93 @@
 "use server"
 
-import { createGenerationPlan } from "../../../../bin/name-generator"
+import { createGenerationPlan, type GenerationPlan } from "../../../../bin/name-generator"
 import { WORDNET_DEFINITIONS } from "../../../../bin/wordnet-definitions"
+
+export type NameResult = { name: string; meaning: string }
+
+const LETTERS = "abcdefghijklmnopqrstuvwxyz"
+const PAGE_SIZE = 500
+
+// Building a plan fills its count memo, the expensive part. Paging and letter jumps
+// reuse the same query, so keep the last few plans warm.
+const PLAN_CACHE_LIMIT = 24
+const planCache = new Map<string, GenerationPlan>()
+
+function getPlan(targetLength: number, prefix: string, suffix: string, contains: string) {
+  const key = `${targetLength}:${prefix}:${suffix}:${contains}`
+  const cached = planCache.get(key)
+
+  if (cached) {
+    planCache.delete(key)
+    planCache.set(key, cached)
+    return cached
+  }
+
+  const plan = createGenerationPlan(targetLength, prefix, suffix, contains)
+  planCache.set(key, plan)
+
+  if (planCache.size > PLAN_CACHE_LIMIT) {
+    const oldest = planCache.keys().next().value
+    if (oldest !== undefined) planCache.delete(oldest)
+  }
+
+  return plan
+}
+
+function readPage(plan: GenerationPlan, skip: number, limit: number) {
+  const results: NameResult[] = []
+
+  for (const name of plan.namesFrom(skip)) {
+    results.push({ name, meaning: WORDNET_DEFINITIONS.get(name) ?? "" })
+    if (results.length >= limit) break
+  }
+
+  return results
+}
+
+// Offset of each first letter in the alphabetical stream, or -1 when no name starts with it.
+function letterOffsets(plan: GenerationPlan, prefix: string) {
+  const offsets: Record<string, number> = {}
+
+  for (const letter of LETTERS) offsets[letter] = -1
+
+  if (plan.count === 0) return offsets
+
+  if (prefix) {
+    offsets[prefix[0]!] = 0
+    return offsets
+  }
+
+  let offset = 0
+  for (const [letter, count] of plan.branchCounts()) {
+    offsets[letter] = offset
+    offset += count
+  }
+
+  return offsets
+}
+
+const clampLimit = (limit: number) => Math.min(Math.max(1, Math.floor(limit)), PAGE_SIZE)
+
+export async function searchNamesAction(
+  targetLength: number,
+  prefix: string,
+  suffix: string,
+  contains: string,
+) {
+  try {
+    const plan = getPlan(targetLength, prefix, suffix, contains)
+
+    return {
+      count: plan.count,
+      results: readPage(plan, 0, PAGE_SIZE),
+      offsets: letterOffsets(plan, prefix),
+    }
+  } catch (error) {
+    console.error("Error generating names:", error)
+    return { count: 0, results: [] as NameResult[], offsets: {} as Record<string, number> }
+  }
+}
 
 export async function generateNamesAction(
   targetLength: number,
@@ -9,83 +95,13 @@ export async function generateNamesAction(
   suffix: string,
   contains: string,
   skip = 0,
-  limit = 500,
+  limit = PAGE_SIZE,
 ) {
   try {
-    const mainPlan = createGenerationPlan(targetLength, prefix, suffix, contains)
-
-    if (mainPlan.count === 0) {
-      return { count: 0, results: [] }
-    }
-
-    const results: { name: string; meaning: string }[] = []
-    let skipped = 0
-    let fetched = 0
-
-    for (const name of mainPlan.names) {
-      if (skipped < skip) {
-        skipped++
-        continue
-      }
-
-      const meaning = WORDNET_DEFINITIONS.get(name) ?? ""
-      results.push({ name, meaning })
-      fetched++
-
-      if (fetched >= limit) break
-    }
-
-    return { count: mainPlan.count, results }
+    const plan = getPlan(targetLength, prefix, suffix, contains)
+    return { count: plan.count, results: readPage(plan, Math.max(0, skip), clampLimit(limit)) }
   } catch (error) {
     console.error("Error generating names:", error)
-    return { count: 0, results: [] }
-  }
-}
-
-export async function getLetterOffsetsAction(
-  targetLength: number,
-  prefix: string,
-  suffix: string,
-  contains: string,
-) {
-  try {
-    const letters = "abcdefghijklmnopqrstuvwxyz".split("")
-    const offsets: Record<string, number> = {}
-    let currentOffset = 0
-
-    // If prefix is already multi-character, A-Z jump doesn't make much sense in the UI
-    // but we can still return offsets for the next possible characters if we wanted.
-    // For now, let's assume this is for "jumping" the first character if no prefix is set,
-    // or jumping within a prefix if suitable.
-
-    // We iterate each possible starting character and get its count.
-    for (const char of letters) {
-      // If a prefix is set, we only care about letters that match the prefix
-      if (prefix && !char.startsWith(prefix) && !prefix.startsWith(char)) {
-        offsets[char] = -1 // Not reachable
-        continue
-      }
-
-      // If prefix is length 1, we are already at that letter.
-      // If prefix is empty, each letter is a branch.
-      const searchPrefix = prefix || char
-      if (prefix && prefix.length > 0 && char !== prefix[0]) {
-        offsets[char] = -1
-        continue
-      }
-
-      const plan = createGenerationPlan(targetLength, searchPrefix, suffix, contains)
-      if (plan.count > 0) {
-        offsets[char] = currentOffset
-        currentOffset += plan.count
-      } else {
-        offsets[char] = -1
-      }
-    }
-
-    return offsets
-  } catch (error) {
-    console.error("Error getting letter offsets:", error)
-    return {}
+    return { count: 0, results: [] as NameResult[] }
   }
 }

@@ -1,168 +1,787 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap");
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 @source "../**/*.{ts,tsx}";
 
-@theme inline {
-  --font-sans:
-    "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Syne", "Plus Jakarta Sans", sans-serif;
-  --font-serif: "Syne", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-heading: var(--font-display);
+/*
+ * Wordloom design system
+ * ──────────────────────
+ * 1. Theme tokens (Tailwind): fonts, type scale, colour aliases, radius, elevation, motion
+ * 2. Raw values per theme (:root / .dark)
+ * 3. Base element styles
+ * 4. Materials: surface buttons, segmented thumb
+ * 5. Motion primitives: icon swap, sheet, inspector, spinner
+ * 6. Rendering helpers
+ */
 
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
+/* 1 ── Theme tokens ─────────────────────────────────────────────────────── */
+@theme inline {
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale. Size, line-height and tracking travel together. Inter's opsz axis
+     switches to its Display cut on its own above ~24px. */
+  --text-display: 4rem;
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.042em;
+  --text-title: 2.25rem;
+  --text-title--line-height: 1.08;
+  --text-title--letter-spacing: -0.032em;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.3;
+  --text-heading--letter-spacing: -0.02em;
+  --text-word: 1.5rem;
+  --text-word--line-height: 1.12;
+  --text-word--letter-spacing: -0.028em;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.6;
+  --text-body--letter-spacing: -0.006em;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.5;
+  --text-small--letter-spacing: -0.003em;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.45;
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1rem;
+  --text-label--letter-spacing: 0.07em;
+  --text-micro: 0.625rem;
+  --text-micro--line-height: 0.875rem;
+  --text-micro--letter-spacing: 0.02em;
+
+  /* Colour aliases */
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--foreground);
+  --color-sidebar: var(--sidebar);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-accent: var(--muted);
+  --color-accent-foreground: var(--foreground);
+  --color-primary: var(--foreground);
+  --color-primary-foreground: var(--background);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-action: var(--action);
+  --color-action-foreground: var(--action-foreground);
+  --color-action-soft: var(--action-soft);
+  --color-success: var(--success);
+  --color-destructive: var(--destructive);
+
+  /* Radius ladder: nested radius = outer radius - padding */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 24px;
+
+  /* Elevation */
+  --shadow-card: var(--elevation-card);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
+  --shadow-thumb: var(--elevation-thumb);
+
+  /* Motion */
+  --ease-out: var(--ease-out);
+  --ease-in-out: var(--ease-in-out);
+  --ease-drawer: var(--ease-drawer);
+  --ease-surface: var(--ease-surface);
 }
 
+/* 2 ── Raw values ───────────────────────────────────────────────────────── */
 :root {
+  /* Motion: UI moves under 300ms and eases out. Keyboard-driven changes don't animate. */
+  --duration-micro: 80ms;
+  --duration-quick: 150ms;
+  --duration-fast: 220ms;
+  --duration-sheet: 280ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-surface: cubic-bezier(0.215, 0.61, 0.355, 1);
 
-  --background: oklch(0.978 0.002 260);
-  --foreground: oklch(0.14 0.004 260);
+  /* Neutrals: one cool, barely-tinted ramp */
+  --background: oklch(0.985 0.002 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.14 0.004 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.14 0.004 260);
-  --primary: oklch(0.14 0.004 260);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.002 260);
-  --secondary-foreground: oklch(0.14 0.004 260);
-  --muted: oklch(0.95 0.002 260);
-  --muted-foreground: oklch(0.46 0.008 260);
-  --accent: oklch(0.95 0.002 260);
-  --accent-foreground: oklch(0.14 0.004 260);
-  --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.89 0.004 260);
-  --input: oklch(0.89 0.004 260);
-  --ring: oklch(0.14 0.004 260);
-  --chart-1: oklch(0.2 0.005 260);
-  --chart-2: oklch(0.4 0.005 260);
-  --chart-3: oklch(0.6 0.005 260);
-  --chart-4: oklch(0.8 0.005 260);
-  --chart-5: oklch(0.9 0.005 260);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.988 0.002 260);
-  --sidebar-foreground: oklch(0.14 0.004 260);
-  --sidebar-primary: oklch(0.14 0.004 260);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.002 260);
-  --sidebar-accent-foreground: oklch(0.14 0.004 260);
-  --sidebar-border: oklch(0.89 0.004 260);
-  --sidebar-ring: oklch(0.14 0.004 260);
+  --sidebar: oklch(0.992 0.0015 250);
+  --muted: oklch(0.955 0.003 250);
+  --foreground: oklch(0.17 0.006 250);
+  --muted-foreground: oklch(0.47 0.01 250);
+  --subtle-foreground: oklch(0.62 0.008 250);
+  --border: oklch(0.915 0.004 250);
+  --border-strong: oklch(0.84 0.006 250);
+  --input: oklch(0.885 0.005 250);
+
+  /* Action: emerald */
+  --action: oklch(0.69 0.15 163);
+  --action-foreground: oklch(1 0 0);
+  --action-soft: oklch(0.69 0.15 163 / 0.12);
+  --ring: oklch(0.69 0.15 163 / 0.55);
+  --success: oklch(0.6 0.14 160);
+  --destructive: oklch(0.58 0.21 27);
+
+  --radius: 10px;
+
+  --elevation-card: 0 1px 2px 0 #0b0d120a, 0 0 0 1px #0b0d1200;
+  --elevation-raised: 0 1px 2px 0 #0b0d120d, 0 6px 16px -6px #0b0d121f;
+  --elevation-overlay: 0 -12px 32px -8px #0b0d122e;
+  --elevation-thumb: 0 1px 2px 0 #0b0d121a, 0 0 0 1px #0b0d120d;
+
+  /* Surface buttons (material shared with Better Space) */
+  --surface-primary-fg: #ffffff;
+  --surface-primary-base: #10b981;
+  --surface-primary-lit: #059669;
+  --surface-primary-edge-top: #5ee0b0;
+  --surface-primary-edge-bottom: #047857;
+  --surface-primary-ring: #047857;
+  --surface-primary-shade: #022c222e;
+  --surface-primary-drop-near: #0647361f;
+  --surface-primary-drop: #06473629;
+  --surface-primary-glow: #10b98100;
+  --surface-primary-sheen: linear-gradient(#ffffff2e, #fff0 50%);
+  --surface-secondary-base: #f2f3f5;
+  --surface-secondary-lit: #e9eaed;
+  --surface-secondary-edge-top: #ffffff00;
+  --surface-secondary-edge-bottom: #0000000f;
+  --surface-secondary-ring: #0000001a;
+  --surface-secondary-drop-near: #0000000a;
+  --surface-secondary-drop: #0000000d;
+  --surface-outline-base: #ffffff;
+  --surface-outline-lit: #f8f9fa;
+  --surface-outline-edge-top: #ffffff00;
+  --surface-outline-edge-bottom: #0000000f;
+  --surface-outline-ring: #00000017;
+  --surface-outline-drop-near: #00000008;
+  --surface-outline-drop: #0000000a;
+  --surface-destructive-base: #d0262b;
+  --surface-destructive-lit: #b81a1f;
+  --surface-destructive-edge-top: #ffffff47;
+  --surface-destructive-edge-bottom: #00000024;
+  --surface-destructive-ring: #a11216;
+  --surface-destructive-drop-near: #00000014;
+  --surface-destructive-drop: #0000001a;
 }
 
 .dark {
-  --background: oklch(0.095 0.004 260);
-  --foreground: oklch(0.98 0.002 260);
-  --card: oklch(0.145 0.005 260);
-  --card-foreground: oklch(0.98 0.002 260);
-  --popover: oklch(0.15 0.005 260);
-  --popover-foreground: oklch(0.98 0.002 260);
-  --primary: oklch(0.98 0.002 260);
-  --primary-foreground: oklch(0.12 0.004 260);
-  --secondary: oklch(0.18 0.006 260);
-  --secondary-foreground: oklch(0.98 0.002 260);
-  --muted: oklch(0.17 0.006 260);
-  --muted-foreground: oklch(0.66 0.008 260);
-  --accent: oklch(0.18 0.006 260);
-  --accent-foreground: oklch(0.98 0.002 260);
-  --destructive: oklch(0.65 0.2 25);
-  --border: oklch(0.24 0.006 260);
-  --input: oklch(0.24 0.006 260);
-  --ring: oklch(0.85 0.004 260);
-  --chart-1: oklch(0.9 0.005 260);
-  --chart-2: oklch(0.7 0.005 260);
-  --chart-3: oklch(0.5 0.005 260);
-  --chart-4: oklch(0.35 0.005 260);
-  --chart-5: oklch(0.2 0.005 260);
-  --sidebar: oklch(0.12 0.005 260);
-  --sidebar-foreground: oklch(0.98 0.002 260);
-  --sidebar-primary: oklch(0.98 0.002 260);
-  --sidebar-primary-foreground: oklch(0.12 0.004 260);
-  --sidebar-accent: oklch(0.18 0.006 260);
-  --sidebar-accent-foreground: oklch(0.98 0.002 260);
-  --sidebar-border: oklch(0.24 0.006 260);
-  --sidebar-ring: oklch(0.85 0.004 260);
+  --background: oklch(0.13 0.004 250);
+  --card: oklch(0.17 0.005 250);
+  --sidebar: oklch(0.15 0.004 250);
+  --muted: oklch(0.215 0.006 250);
+  --foreground: oklch(0.97 0.002 250);
+  --muted-foreground: oklch(0.7 0.008 250);
+  --subtle-foreground: oklch(0.54 0.008 250);
+  --border: oklch(0.255 0.006 250);
+  --border-strong: oklch(0.33 0.007 250);
+  --input: oklch(0.29 0.006 250);
+
+  --action: oklch(0.74 0.15 163);
+  --action-foreground: oklch(1 0 0);
+  --action-soft: oklch(0.74 0.15 163 / 0.16);
+  --ring: oklch(0.74 0.15 163 / 0.55);
+  --success: oklch(0.76 0.14 160);
+  --destructive: oklch(0.68 0.19 25);
+
+  --elevation-card: inset 0 1px 0 0 #ffffff0a, 0 1px 2px 0 #00000066;
+  --elevation-raised: inset 0 1px 0 0 #ffffff12, 0 8px 20px -8px #000000b3;
+  --elevation-overlay: inset 0 1px 0 0 #ffffff14, 0 -12px 32px -8px #000000cc;
+  --elevation-thumb: inset 0 1px 0 0 #ffffff14, 0 1px 2px 0 #00000080;
+
+  --surface-primary-ring: #033d2c;
+  --surface-primary-drop-near: #0000004d;
+  --surface-primary-drop: #00000066;
+  --surface-primary-glow: #10b9814d;
+  --surface-secondary-base: #2b2d31;
+  --surface-secondary-lit: #35373c;
+  --surface-secondary-edge-top: #55575d;
+  --surface-secondary-edge-bottom: #35373b;
+  --surface-secondary-ring: #222327;
+  --surface-secondary-drop-near: #00000000;
+  --surface-secondary-drop: #00000066;
+  --surface-outline-base: #1c1d20;
+  --surface-outline-lit: #18191c;
+  --surface-outline-edge-top: #ffffff14;
+  --surface-outline-edge-bottom: #00000033;
+  --surface-outline-ring: #2a2b2f;
+  --surface-outline-drop-near: #00000033;
+  --surface-outline-drop: #00000040;
+  --surface-destructive-base: #c8161b;
+  --surface-destructive-lit: #d0262b;
+  --surface-destructive-edge-top: #e45c60;
+  --surface-destructive-edge-bottom: #cd262b;
+  --surface-destructive-ring: #7a0d10;
+  --surface-destructive-drop-near: #00000000;
+  --surface-destructive-drop: #00000066;
 }
 
+/* 3 ── Base ─────────────────────────────────────────────────────────────── */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply bg-background text-foreground text-body font-sans;
+    /* Inter: single-storey a off, open digits, disambiguated l/I */
+    font-feature-settings: "cv11", "ss03", "cv05";
+    font-optical-sizing: auto;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  code,
+  kbd,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* JetBrains Mono: no ligatures in UI chrome */
+  .font-mono,
+  code,
+  kbd {
+    font-variant-ligatures: none;
+  }
+
+  ::selection {
+    background: var(--action-soft);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent;
   }
 }
 
-/* Completely remove scrollbars across all browsers and elements while preserving scrollability */
-html,
-body,
-* {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+/* 4 ── Materials ────────────────────────────────────────────────────────── */
+
+/* Surface buttons: sheen, gradient fill, lit edge, ring and stacked shadow paint
+   on ::before, so the press scale and hover lighten never shift the label. */
+@property --surface-top {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+@property --surface-bottom {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #0000;
+}
+.surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  --surface-top: var(--surface-base);
+  --surface-bottom: var(--surface-lit);
+  --surface-edge-mid: color-mix(in srgb, var(--surface-edge-top), var(--surface-edge-bottom));
+  background:
+    var(--surface-sheen, linear-gradient(#0000, #0000)) padding-box,
+    linear-gradient(var(--surface-top), var(--surface-bottom)) padding-box,
+    linear-gradient(var(--surface-edge-top), var(--surface-edge-mid), var(--surface-edge-bottom))
+      border-box,
+    linear-gradient(var(--surface-top), var(--surface-bottom)) border-box;
+  box-shadow:
+    0 0 0 1px var(--surface-ring),
+    inset 0 -3px 6px -3px var(--surface-shade, #0000),
+    0 1px 1px 0 var(--surface-drop-near, #0000),
+    0 2px 4px 0 var(--surface-drop, #0000),
+    0 8px 20px -8px var(--surface-glow, #0000);
+  transition:
+    --surface-top var(--duration-quick) var(--ease-surface),
+    --surface-bottom var(--duration-quick) var(--ease-surface);
+}
+.surface-primary::before {
+  --surface-base: var(--surface-primary-base);
+  --surface-lit: var(--surface-primary-lit);
+  --surface-edge-top: var(--surface-primary-edge-top);
+  --surface-edge-bottom: var(--surface-primary-edge-bottom);
+  --surface-ring: var(--surface-primary-ring);
+  --surface-shade: var(--surface-primary-shade);
+  --surface-drop-near: var(--surface-primary-drop-near);
+  --surface-drop: var(--surface-primary-drop);
+  --surface-glow: var(--surface-primary-glow);
+  --surface-sheen: var(--surface-primary-sheen);
+}
+.surface-secondary::before {
+  --surface-base: var(--surface-secondary-base);
+  --surface-lit: var(--surface-secondary-lit);
+  --surface-edge-top: var(--surface-secondary-edge-top);
+  --surface-edge-bottom: var(--surface-secondary-edge-bottom);
+  --surface-ring: var(--surface-secondary-ring);
+  --surface-drop-near: var(--surface-secondary-drop-near);
+  --surface-drop: var(--surface-secondary-drop);
+}
+.surface-outline::before {
+  --surface-base: var(--surface-outline-base);
+  --surface-lit: var(--surface-outline-lit);
+  --surface-edge-top: var(--surface-outline-edge-top);
+  --surface-edge-bottom: var(--surface-outline-edge-bottom);
+  --surface-ring: var(--surface-outline-ring);
+  --surface-drop-near: var(--surface-outline-drop-near);
+  --surface-drop: var(--surface-outline-drop);
+}
+.surface-destructive::before {
+  --surface-base: var(--surface-destructive-base);
+  --surface-lit: var(--surface-destructive-lit);
+  --surface-edge-top: var(--surface-destructive-edge-top);
+  --surface-edge-bottom: var(--surface-destructive-edge-bottom);
+  --surface-ring: var(--surface-destructive-ring);
+  --surface-drop-near: var(--surface-destructive-drop-near);
+  --surface-drop: var(--surface-destructive-drop);
+}
+/* Hover: quiet keys darken 4%, coloured ones (and everything in dark) lighten 6%. */
+@media (hover: hover) {
+  .surface-secondary:hover::before,
+  .surface-outline:hover::before {
+    --surface-top: color-mix(in srgb, var(--surface-base), black 4%);
+    --surface-bottom: color-mix(in srgb, var(--surface-lit), black 4%);
+  }
+  .surface-primary:hover::before,
+  .surface-destructive:hover::before,
+  .dark .surface:hover::before {
+    --surface-top: color-mix(in srgb, var(--surface-base), white 6%);
+    --surface-bottom: color-mix(in srgb, var(--surface-lit), white 6%);
+  }
+}
+.surface-secondary[aria-pressed="true"]::before,
+.surface-outline[aria-pressed="true"]::before,
+.surface-outline[aria-expanded="true"]::before {
+  --surface-top: color-mix(in srgb, var(--surface-base), black 4%);
+  --surface-bottom: color-mix(in srgb, var(--surface-lit), black 4%);
 }
 
-::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
+/* 5 ── Motion primitives ────────────────────────────────────────────────── */
+
+/* Icon swap: both icons stay mounted and cross-fade, so a rapid re-click interrupts
+   the transition instead of restarting it. */
+.icon-swap {
+  display: inline-grid;
+  place-items: center;
+}
+.icon-swap > * {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    scale var(--duration-fast) var(--ease-out),
+    filter var(--duration-fast) var(--ease-out);
+}
+.icon-swap > [data-hidden="true"] {
+  opacity: 0;
+  scale: 0.25;
+  filter: blur(4px);
 }
 
-/* Glassmorphism helpers */
-.glass-panel {
-  background: color-mix(in srgb, var(--color-card) 75%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* Sheets: rendered once, toggled with data-open. Transforms only. */
+.sheet-backdrop {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.sheet-backdrop[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sheet {
+  translate: 0 100%;
+  visibility: hidden;
+  transition:
+    translate var(--duration-sheet) var(--ease-drawer),
+    visibility 0s linear var(--duration-sheet);
+}
+.sheet[data-open="true"] {
+  translate: 0 0;
+  visibility: visible;
+  transition:
+    translate var(--duration-sheet) var(--ease-drawer),
+    visibility 0s;
 }
 
-.glass-nav {
-  background: color-mix(in srgb, var(--color-background) 80%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+/* Inspector and freshly shown content: short rise-in */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    translate: 16px 0;
+  }
+}
+.inspector-enter {
+  animation: slide-in-right var(--duration-fast) var(--ease-out);
+}
+.rise-in {
+  animation: rise-in var(--duration-fast) var(--ease-out) both;
+}
+
+/* Dropdown menu panels: scale from the trigger, close faster than they open */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+.menu-panel {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+}
+.menu-panel[data-state="open"] {
+  animation: menu-in var(--duration-quick) var(--ease-out);
+}
+.menu-panel[data-state="closed"] {
+  animation: menu-out var(--duration-micro) var(--ease-out);
+}
+
+/* Landing loops (components/landing/bento-visuals.tsx). Paused until their LoopZone
+   is on screen; constant motion is linear, state changes ease out. */
+.loop {
+  animation-play-state: paused !important;
+}
+[data-in-view="true"] .loop {
+  animation-play-state: running !important;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.loop-marquee {
+  animation: marquee 32s linear infinite;
+}
+.loop-marquee-reverse {
+  animation: marquee 38s linear infinite reverse;
+}
+
+/* Three stacked cards take turns: rise in, hold, lift out. */
+@keyframes def-cycle {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  5%,
+  30% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  35%,
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+    filter: blur(2px);
+  }
+}
+.loop-def-cycle {
+  animation: def-cycle 9s var(--ease-out) infinite both;
+}
+
+/* Each row lights up as it's "checked", then the arrow swaps to a check. */
+@keyframes scan-row {
+  0%,
+  100% {
+    border-color: var(--border);
+    box-shadow: var(--elevation-card);
+  }
+  6%,
+  14% {
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--action-soft);
+  }
+  24% {
+    border-color: var(--border);
+    box-shadow: var(--elevation-card);
+  }
+}
+@keyframes scan-arrow {
+  0%,
+  8% {
+    opacity: 1;
+    scale: 1;
+  }
+  12%,
+  72% {
+    opacity: 0;
+    scale: 0.6;
+  }
+  80%,
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes scan-check {
+  0%,
+  8% {
+    opacity: 0;
+    scale: 0.6;
+  }
+  12%,
+  72% {
+    opacity: 1;
+    scale: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+.loop-scan-row {
+  animation: scan-row 4.8s var(--ease-out) infinite both;
+}
+.loop-scan-arrow {
+  animation: scan-arrow 4.8s var(--ease-out) infinite both;
+}
+.loop-scan-check {
+  animation: scan-check 4.8s var(--ease-out) infinite both;
+}
+
+/* Preview result cards settle in when the preset changes (user-triggered). */
+@keyframes preview-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.preview-card {
+  animation: preview-card-in var(--duration-fast) var(--ease-out) both;
+}
+
+/* Aceternity spotlight: one sweep on load, then still */
+@keyframes spotlight {
+  from {
+    opacity: 0;
+    transform: translate(-72%, -62%) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -40%) scale(1);
+  }
+}
+.animate-spotlight {
+  animation: spotlight 1.6s var(--ease-out) 0.2s 1 forwards;
+}
+
+/* Transitions.dev — Text states swap (transitions.dev/detail.html?t=text-states-swap).
+   Driven by FlipWords in three phases:
+   1. .is-exit: old text slides up, blurs and fades.
+   2. After --text-swap-dur: change the text, add .is-enter-start (jump below, no transition).
+   3. Force a reflow, remove .is-enter-start so the new text animates back to rest. */
+:root {
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
+}
+
+.t-text-swap {
+  display: inline-block;
+  transform: translateY(0);
+  filter: blur(0);
+  opacity: 1;
+  transition:
+    transform var(--text-swap-dur) var(--text-swap-ease),
+    filter var(--text-swap-dur) var(--text-swap-ease),
+    opacity var(--text-swap-dur) var(--text-swap-ease);
+  will-change: transform, filter, opacity;
+}
+.t-text-swap.is-exit {
+  transform: translateY(calc(var(--text-swap-translate-y) * -1));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+}
+.t-text-swap.is-enter-start {
+  transform: translateY(var(--text-swap-translate-y));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+  transition: none;
+}
+
+/* The default tokens are tuned for 15px UI text; scale distance and blur with the
+   headline so the swap reads at display size. */
+.t-text-swap-display {
+  --text-swap-dur: 200ms;
+  --text-swap-translate-y: 0.16em;
+  --text-swap-blur: 0.07em;
+}
+
+/* Transitions.dev — Number pop-in (transitions.dev/detail.html?t=number-pop-in).
+   Used for the Saved count and the landing name grid; --digit-dir-y is 1 (from below)
+   or -1 (from above). */
+:root {
+  --digit-dur: 500ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
+}
+
+@keyframes t-digit-pop-in {
+  0% {
+    transform: translate(
+      calc(var(--digit-distance) * var(--digit-dir-x)),
+      calc(var(--digit-distance) * var(--digit-dir-y))
+    );
+    opacity: 0;
+    filter: blur(var(--digit-blur));
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.t-digit-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+.t-digit {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+.t-digit-group.is-animating .t-digit {
+  animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+}
+.t-digit-group.is-animating .t-digit[data-stagger="1"] {
+  animation-delay: var(--digit-stagger);
+}
+.t-digit-group.is-animating .t-digit[data-stagger="2"] {
+  animation-delay: calc(var(--digit-stagger) * 2);
+}
+.t-digit-group.is-animating .t-digit[data-stagger="3"] {
+  animation-delay: calc(var(--digit-stagger) * 3);
+}
+
+/* Spinner: appears with a fade so a late-showing loader doesn't pop */
+@keyframes spinner-in {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+.spinner-enter {
+  animation: spinner-in var(--duration-quick) var(--ease-out);
+}
+
+/* 6 ── Rendering helpers ────────────────────────────────────────────────── */
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Off-screen letter groups skip layout and paint until scrolled near. */
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
+/* Reduced motion keeps fades that explain a change and drops movement. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes preview-card-in {
+    from {
+      opacity: 0;
+    }
+  }
+  /* Looping decoration stops entirely; the first state stays readable. */
+  .loop {
+    animation: none !important;
+  }
+  .loop-def-cycle:not(:first-child),
+  .loop-scan-check {
+    opacity: 0;
+  }
+  @keyframes spinner-in {
+    from {
+      opacity: 0;
+    }
+  }
+  .t-text-swap {
+    transition: none !important;
+  }
+  .t-digit-group .t-digit {
+    animation: none !important;
+  }
+  .animate-spotlight {
+    animation: none;
+    opacity: 1;
+    transform: translate(-50%, -40%);
+  }
+  .icon-swap > [data-hidden="true"] {
+    scale: 1;
+    filter: none;
+  }
+  .sheet,
+  .sheet[data-open="true"] {
+    transition: visibility 0s;
+  }
+  .surface::before {
+    transition-duration: 0s;
+  }
 }

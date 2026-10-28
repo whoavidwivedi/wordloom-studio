@@ -1,72 +1,39 @@
-"use client"
-
 import { cn } from "@/lib/utils"
 
-interface WordloomLogoIconProps {
-  className?: string
-  size?: "sm" | "md" | "lg"
-}
-
-/**
- * Clean, geometric "W" vector mark for Wordloom.
- * Rendered directly without enclosing boxes for a clean, modern aesthetic.
- */
-export function WordloomLogoIcon({ className, size = "md" }: WordloomLogoIconProps) {
-  const sizeClasses = {
-    sm: "h-4 w-4",
-    md: "h-5 w-5",
-    lg: "h-6 w-6",
-  }[size]
-
+/** Emerald gradient circle, the same mark as the favicon. */
+export function WordloomMark({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn(sizeClasses, "shrink-0 text-foreground", className)}
+    <span
       aria-hidden="true"
-    >
-      <path
-        d="M3.5 6.5L8 18L12 9.5L16 18L20.5 6.5"
-        stroke="currentColor"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      className={cn(
+        "inline-block size-5 shrink-0 rounded-full",
+        "bg-[radial-gradient(circle_at_36%_28%,rgb(255_255_255/0.45),transparent_55%),linear-gradient(135deg,#6ee7b7,#10b981_50%,#047857)]",
+        "shadow-[inset_0_0_0_1px_rgb(255_255_255/0.18),0_1px_2px_rgb(4_120_87/0.35)]",
+        className,
+      )}
+    />
   )
 }
 
-interface WordloomBrandLockupProps {
+/** The emerald mark followed by the lowercase wordmark. */
+export function WordloomBrandLockup({
+  className,
+  size = "md",
+}: {
   className?: string
   size?: "sm" | "md"
-}
-
-export function WordloomBrandLockup({ className, size = "md" }: WordloomBrandLockupProps) {
+}) {
   return (
-    <div className={cn("flex items-center gap-2 select-none cursor-default", className)}>
-      {/* Unboxed vector mark */}
-      <WordloomLogoIcon size={size} />
-
-      {/* Unified typographic lockup without artificial container boxes */}
-      <div className="flex items-baseline gap-1.5">
-        <span
-          className={cn(
-            "font-sans font-bold tracking-tight text-foreground",
-            size === "sm" ? "text-sm" : "text-sm sm:text-[15px]",
-          )}
-        >
-          Wordloom
-        </span>
-        <span
-          className={cn(
-            "font-sans font-normal text-muted-foreground",
-            size === "sm" ? "text-xs" : "text-xs sm:text-[13px]",
-          )}
-        >
-          Studio
-        </span>
-      </div>
-    </div>
+    <span className={cn("flex items-center gap-2 select-none", className)}>
+      <WordloomMark className={size === "sm" ? "size-4" : "size-5"} />
+      <span
+        className={cn(
+          "text-foreground font-semibold tracking-[-0.04em]",
+          size === "sm" ? "text-[15px]" : "text-[19px]",
+        )}
+      >
+        wordloom
+      </span>
+    </span>
   )
 }
